@@ -28,9 +28,11 @@ jobs:
           name=${KIND_NAME#Kustomization/}; name=${name%%.*}; app=${name%-smoke}
           var=$(echo "$app" | tr 'a-z-' 'A-Z_')_VERSION
           version=${REVISION%%@*}; version=${version#v}
-          echo "var=$var" >> "$GITHUB_OUTPUT"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "app=$app" >> "$GITHUB_OUTPUT"
+          {
+            echo "var=$var"
+            echo "version=$version"
+            echo "app=$app"
+          } >> "$GITHUB_OUTPUT"
       - id: token
         uses: actions/create-github-app-token@v3
         with:
