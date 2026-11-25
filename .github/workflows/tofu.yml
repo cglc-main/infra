@@ -1,5 +1,6 @@
 # OpenTofu: a pull request that touches tofu/ or hosts/ gets the plan as a comment; after the merge, the apply waits for
-# a person's approval (GitHub Environment `production`). Docs: delivery.md.
+# a person's approval (GitHub Environment `production`). It can also be started by hand (Actions → tofu → Run workflow),
+# with the same approval. Docs: delivery.md.
 name: tofu
 
 on:
@@ -8,6 +9,7 @@ on:
   push:
     branches: [main]
     paths: [tofu/**, hosts/**]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -59,7 +61,7 @@ jobs:
           gh pr comment ${{ github.event.pull_request.number }} --body-file comment.md --edit-last --create-if-none
 
   apply:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     environment: production
     steps:
