@@ -1,0 +1,10 @@
+# Per app: its namespace, secrets and the platform-side objects. Our own apps' code and Kubernetes bases come from
+# their repos at the released version (../releases); third-party apps are Helm charts or plain manifests here.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - auth
+  - bulbashenko-com
+  - headscale
+  - stalwart
+  - nextcloud

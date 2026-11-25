@@ -1,0 +1,76 @@
+# Two instances on different nodes (local disks). A replica takes over when the primary's node is lost; with
+# `dataDurability: preferred` a commit waits for the replica while it is there, so a failover loses no transactions,
+# and writes go on alone while it is not. WAL and daily base backups go to Backblaze B2 (backup.yaml).
+# Apps connect to pg-rw.data.svc.cluster.local:5432 with sslmode=verify-full against the CA in the ConfigMap
+# internal-ca (components/internal-ca), which signs the server certificate below.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: pg-server
+spec:
+  secretName: pg-server-tls
+  issuerRef: { kind: ClusterIssuer, name: internal-ca }
+  usages: [server auth]
+  privateKey: { algorithm: ECDSA, size: 256, rotationPolicy: Always }
+  dnsNames:
+    - pg-rw
+    - pg-rw.data
+    - pg-rw.data.svc
+    - pg-rw.data.svc.cluster.local
+    - pg-r
+    - pg-r.data
+    - pg-r.data.svc
+    - pg-r.data.svc.cluster.local
+    - pg-ro
+    - pg-ro.data
+    - pg-ro.data.svc
+    - pg-ro.data.svc.cluster.local
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: pg
+spec:
+  instances: 2
+  # renovate: datasource=docker depName=ghcr.io/cloudnative-pg/postgresql
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.7-minimal-trixie
+  priorityClassName: tier-1
+  primaryUpdateStrategy: unsupervised
+  storage:
+    storageClass: local-path
+    size: 10Gi
+  affinity:
+    enablePodAntiAffinity: true
+    podAntiAffinityType: required
+    topologyKey: kubernetes.io/hostname
+  postgresql:
+    synchronous:
+      method: any
+      number: 1
+      dataDurability: preferred
+  certificates:
+    serverTLSSecret: pg-server-tls
+    serverCASecret: internal-ca
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: b2
+  managed:
+    roles:
+      - { name: kratos, login: true, ensure: present, passwordSecret: { name: pg-role-kratos } }
+      - { name: hydra, login: true, ensure: present, passwordSecret: { name: pg-role-hydra } }
+      - { name: keto, login: true, ensure: present, passwordSecret: { name: pg-role-keto } }
+      - { name: site, login: true, ensure: present, passwordSecret: { name: pg-role-site } }
+      - { name: nextcloud, login: true, ensure: present, passwordSecret: { name: pg-role-nextcloud } }
+      - { name: stalwart, login: true, ensure: present, passwordSecret: { name: pg-role-stalwart } }
+---
+# The instances' pods belong to the Cluster, not to a Deployment, so Goldilocks/VPA does not size them. A floor
+# for the scheduler: a PDB keeps one instance up during drains.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pg
+spec:
+  minAvailable: 1
+  selector: { matchLabels: { cnpg.io/cluster: pg } }

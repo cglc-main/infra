@@ -1,0 +1,45 @@
+# Grafana: the break-glass admin (/login?disableAutoLogin) and the SSO client secret.
+apiVersion: v1
+kind: Secret
+metadata:
+    name: grafana-admin
+stringData:
+    admin-user: ENC[AES256_GCM,data:7HO+XSs=,iv:l4maPt66dPr5Ydw2lYkPtFGXMKLWy75992apj7D71XA=,tag:vZS3sUmjzZRM3HYbXjQGLg==,type:str]
+    admin-password: ENC[AES256_GCM,data:NUwDIpb6T/vRWQzC2oLlA/5ouOqxL8uFrwTsywa6WAa1+aN9g067XupeJWplTtNN,iv:WYpbaIhfNSfAZEImpk6rULezGq6kqDmrkSViwthrm/8=,tag:ca1VZ8FA1fGGppfaJ4r03Q==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA4KzF6cWIvSFNQTmtwemt0
+            VXpqczU2NjhqK25hUzN1Vk93OS9sNi8zcmlBCkVML3YwN1VCUjc4Vjd4RnpPa0cz
+            MXpnaHJxYXkwV2lpbTdsekxWTVQ1N1kKLS0tIG1hblArZEl2T0FQSS9EbkdMTWI3
+            ME9vUWVtdENjK3g4SlpNaXRJYUhBcjgKaPeV3uBedPOjmD54kOoJvVbfPSOjlRS5
+            ISl85k5pUdRqOXWr5ZWYvWNwm1/4Mhhn+gkuG0nXYZ35TvLJmuJ4Jg==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1ajv2jeesvhqpn6pudqvjkvnujy32p22ytd78kt3r2yryqk79kazsjrv78h
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-11-25T21:27:03Z"
+    mac: ENC[AES256_GCM,data:6txY0lTt45jzSw81+CysGyZNt0DM1nkAOLKFYDW26le94kIFhnSgp3b7+zDu91DUHFTTkPwPXDxfquCp666UQahw5I55EiPT2dyNnCXHccUu2UUg+43ATA91NQVK1QYRmEBNyu5W3b9k7IVUQ13VbC/Q4uCcKMBTT0YQF5rqYfs=,iv:138OsCiScVXhGM9s8z/ZsCu40FiFjIF4qNb8sjm77wI=,tag:RsELi4lC5l1c3FpYqKgujA==,type:str]
+    version: 3.13.3
+---
+apiVersion: v1
+kind: Secret
+metadata:
+    name: grafana-oidc
+stringData:
+    GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: ENC[AES256_GCM,data:RSJpmqYmq1CDaV9AClVMSpiM9hE2LmZ9NjdpPv9RIMv97KdNXv9yrWIhdWOa5pliCtRl3MsKWgsvux7dCy3VEg==,iv:9I3jka0qEuPsgkMSa6t6zQWxmHwRRlmV26bI1rfSyig=,tag:f1ezDWtPhGhaip//gCDijg==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA4KzF6cWIvSFNQTmtwemt0
+            VXpqczU2NjhqK25hUzN1Vk93OS9sNi8zcmlBCkVML3YwN1VCUjc4Vjd4RnpPa0cz
+            MXpnaHJxYXkwV2lpbTdsekxWTVQ1N1kKLS0tIG1hblArZEl2T0FQSS9EbkdMTWI3
+            ME9vUWVtdENjK3g4SlpNaXRJYUhBcjgKaPeV3uBedPOjmD54kOoJvVbfPSOjlRS5
+            ISl85k5pUdRqOXWr5ZWYvWNwm1/4Mhhn+gkuG0nXYZ35TvLJmuJ4Jg==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1ajv2jeesvhqpn6pudqvjkvnujy32p22ytd78kt3r2yryqk79kazsjrv78h
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-11-25T21:27:03Z"
+    mac: ENC[AES256_GCM,data:6txY0lTt45jzSw81+CysGyZNt0DM1nkAOLKFYDW26le94kIFhnSgp3b7+zDu91DUHFTTkPwPXDxfquCp666UQahw5I55EiPT2dyNnCXHccUu2UUg+43ATA91NQVK1QYRmEBNyu5W3b9k7IVUQ13VbC/Q4uCcKMBTT0YQF5rqYfs=,iv:138OsCiScVXhGM9s8z/ZsCu40FiFjIF4qNb8sjm77wI=,tag:RsELi4lC5l1c3FpYqKgujA==,type:str]
+    version: 3.13.3

@@ -1,0 +1,13 @@
+# The certificate of the internal CA (public), as apps expect it: ConfigMap internal-ca, key ca.crt, mounted at
+# /etc/internal-ca for sslmode=verify-full. Also as a Secret, which is what CloudNativePG reads (serverCASecret).
+# Include this component in every namespace that talks to Postgres. The CA's key: configs/cluster-issuers.sops.yaml.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+configMapGenerator:
+  - name: internal-ca
+    files: [ca.crt]
+secretGenerator:
+  - name: internal-ca
+    files: [ca.crt]
+generatorOptions:
+  disableNameSuffixHash: true

@@ -1,0 +1,10 @@
+# cglc-main/bulbashenko.com (the site). What it needs from the cluster: docs contracts/site.md.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: bulbashenko-com
+resources:
+  - namespace.yaml
+  - secret.sops.yaml
+components:
+  - ../../../../components/internal-ca
+  - ../../../../components/defaults

@@ -1,0 +1,10 @@
+# Nextcloud (cloud.bulbashenko.com): files, and the site's media (Team folder Site). Nothing stays on a node:
+#   - the code comes from the image into an emptyDir on every start (init container `prepare`);
+#   - config.php (the instance's identity and secrets) and the files are on the Storage Box;
+#   - the database is in pg.
+# So the pod starts on any node, like Headscale. tier-2.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - release
+  - namespace

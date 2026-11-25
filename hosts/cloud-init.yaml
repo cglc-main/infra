@@ -1,0 +1,163 @@
+#cloud-config
+# A node of the cluster, from a fresh Debian 13 (hcloud server rebuild). Rendered by tofu (nodes.tf, output
+# cloud_init) with the node's name, addresses and secrets. Docs: operations/rebuild-node.md.
+hostname: ${name}
+package_update: true
+package_upgrade: true
+packages:
+  - curl
+  - keepalived
+  - systemd-zram-generator
+  - unattended-upgrades
+  - apt-listchanges
+
+write_files:
+  # Traefik binds 25/80/443/465/587/993 on the host network without root; kubelet and Flannel need forwarding.
+  - path: /etc/sysctl.d/90-cluster.conf
+    content: |
+      net.ipv4.ip_unprivileged_port_start = 0
+      net.ipv4.ip_forward = 1
+      net.ipv6.conf.all.forwarding = 1
+      fs.inotify.max_user_instances = 1024
+      fs.inotify.max_user_watches = 1048576
+      vm.swappiness = 100
+
+  # Compressed swap in RAM: about half of the memory again for pages nobody touches (kubelet: LimitedSwap).
+  - path: /etc/systemd/zram-generator.conf
+    content: |
+      [zram0]
+      zram-size = ram / 2
+      compression-algorithm = zstd
+
+  # Security updates install themselves; kured reboots the node when one needs it (one node at a time).
+  - path: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+
+  - path: /etc/ssh/sshd_config.d/90-cluster.conf
+    content: |
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PermitRootLogin prohibit-password
+
+  # The Floating IP is configured on every node; Hetzner routes it to the one it is assigned to (keepalived).
+  - path: /etc/systemd/system/floating-ip.service
+    content: |
+      [Unit]
+      Description=Floating IP on lo
+      After=network-online.target
+      Wants=network-online.target
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      ExecStart=/usr/sbin/ip addr replace ${floating_ip}/32 dev lo
+      # Pods must not read the metadata service: the user data (this file) holds secrets.
+      ExecStart=/usr/sbin/iptables -I FORWARD -d 169.254.169.254 -j DROP
+      [Install]
+      WantedBy=multi-user.target
+
+  # keepalived: the Floating IP belongs to one node whose Traefik answers /ping. When that changes, the new master
+  # assigns it to itself through the Hetzner API (one request).
+  - path: /etc/keepalived/keepalived.conf
+    content: |
+      global_defs {
+        script_user root
+        enable_script_security
+      }
+      vrrp_script traefik {
+        script "/usr/bin/curl -fsS -m 2 -o /dev/null http://127.0.0.1:9000/ping"
+        interval 2
+        fall 2
+        rise 2
+      }
+      vrrp_instance floating_ip {
+        state BACKUP
+        interface PRIVATE_IFACE
+        virtual_router_id 51
+        priority ${priority}
+        nopreempt
+        advert_int 1
+        unicast_src_ip ${private_ip}
+        unicast_peer {
+%{ for p in peers ~}
+          ${p}
+%{ endfor ~}
+        }
+        track_script {
+          traefik
+        }
+        notify_master /etc/keepalived/assign-floating-ip.sh
+      }
+  - path: /etc/keepalived/assign-floating-ip.sh
+    permissions: "0700"
+    content: |
+      #!/bin/sh
+      exec /usr/bin/curl -fsS -m 10 -X POST \
+        -H "Authorization: Bearer ${hcloud_token}" -H "Content-Type: application/json" \
+        -d '{"server": ${server_id}}' \
+        https://api.hetzner.cloud/v1/floating_ips/${floating_id}/actions/assign
+
+  # k3s: a server node (control plane and etcd on all three) that also runs workloads.
+  - path: /etc/rancher/k3s/config.yaml
+    permissions: "0600"
+    content: |
+      token: "${k3s_token}"
+%{ if first ~}
+      cluster-init: true
+%{ else ~}
+      server: https://${first_ip}:6443
+%{ endif ~}
+      node-ip: ${private_ip}
+      advertise-address: ${private_ip}
+      tls-san: [${private_ip}, ${tailnet_ip}, ${name}.bulbashenko.com]
+      flannel-backend: wireguard-native
+      disable: [traefik, servicelb]
+      secrets-encryption: true
+      # Pods on a lost node move after 30 s instead of 5 minutes.
+      kube-apiserver-arg:
+        - default-not-ready-toleration-seconds=30
+        - default-unreachable-toleration-seconds=30
+      kubelet-arg:
+        - config=/etc/rancher/k3s/kubelet.yaml
+      # etcd snapshots to Backblaze B2, every 6 hours, kept 2 days.
+      etcd-snapshot-schedule-cron: "0 */6 * * *"
+      etcd-snapshot-retention: 8
+      etcd-s3: true
+      etcd-s3-endpoint: s3.eu-central-003.backblazeb2.com
+      etcd-s3-region: eu-central-003
+      etcd-s3-bucket: cglc-bucket
+      etcd-s3-folder: etcd
+      etcd-s3-access-key: "${etcd_s3_key}"
+      etcd-s3-secret-key: "${etcd_s3_secret}"
+
+  # The node protects itself: memory for the system and k3s is reserved (GKE's formula: 25 % of the first 4 GiB),
+  # and kubelet evicts pods before the kernel's OOM killer would reach k3s or etcd. Swap: zram, for Burstable pods.
+  - path: /etc/rancher/k3s/kubelet.yaml
+    content: |
+      apiVersion: kubelet.config.k8s.io/v1beta1
+      kind: KubeletConfiguration
+      kubeReserved:
+        cpu: 100m
+        memory: 1Gi
+      evictionHard:
+        memory.available: 100Mi
+        nodefs.available: 10%
+        imagefs.available: 15%
+      failSwapOn: false
+      memorySwap:
+        swapBehavior: LimitedSwap
+
+runcmd:
+  - sysctl --system
+  - systemctl daemon-reload
+  - systemctl enable --now floating-ip.service
+  - systemctl restart systemd-zram-setup@zram0.service || true
+  - systemctl restart ssh
+  # keepalived on the private network's interface (the one holding ${private_ip}).
+  - sed -i "s/PRIVATE_IFACE/$(ip -o -4 addr show | awk '/ ${replace(private_ip, ".", "\\.")}\//{print $2}')/" /etc/keepalived/keepalived.conf
+  - systemctl enable --now keepalived
+  # k3s by its official installer, at the version system-upgrade-controller takes over from.
+  - curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${k3s_version}" sh -s - server
+  # Tailscale by its official installer; the node joins the mesh once Headscale runs (docs initial-release.md).
+  - curl -fsSL https://tailscale.com/install.sh | sh

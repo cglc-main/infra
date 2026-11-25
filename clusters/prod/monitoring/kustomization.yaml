@@ -1,0 +1,8 @@
+# Metrics, logs, alerts and Grafana: one chart, victoria-metrics-k8s-stack. All of it is tier-3, the first to go when
+# memory runs short; a dead man's switch (healthchecks.io) reports when it is gone.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - release
+  - namespace
+  - goldilocks

@@ -1,0 +1,47 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: bulbashenko-com
+spec:
+  interval: 1h
+  url: https://github.com/cglc-main/bulbashenko.com
+  ref: { tag: "v${BULBASHENKO_COM_VERSION}" }
+  ignore: |
+    /*
+    !/deploy/
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: bulbashenko-com
+spec:
+  interval: 1h
+  retryInterval: 2m
+  # Each new pod must stay ready 150 s before the next one starts (minReadySeconds in deploy/site.yaml).
+  timeout: 10m
+  sourceRef: { kind: GitRepository, name: bulbashenko-com }
+  path: ./deploy
+  targetNamespace: bulbashenko-com
+  prune: true
+  wait: true
+  images:
+    - { name: ghcr.io/cglc-main/bulbashenko.com, newTag: "${BULBASHENKO_COM_VERSION}" }
+    - { name: ghcr.io/cglc-main/bulbashenko.com-migrate, newTag: "${BULBASHENKO_COM_VERSION}" }
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: bulbashenko-com-smoke
+spec:
+  dependsOn: [{ name: bulbashenko-com }]
+  interval: 1h
+  retryInterval: 5m
+  timeout: 6m
+  sourceRef: { kind: GitRepository, name: bulbashenko-com }
+  path: ./deploy/smoke
+  targetNamespace: bulbashenko-com
+  prune: true
+  wait: true
+  force: true
+  images:
+    - { name: ghcr.io/cglc-main/bulbashenko.com-e2e, newTag: "${BULBASHENKO_COM_VERSION}" }

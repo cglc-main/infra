@@ -1,0 +1,25 @@
+# k3s upgrades: system-upgrade-controller (crds/system-upgrade-controller.yaml) moves every node to this version, one
+# node at a time, draining it first. Renovate proposes new versions; patch releases merge on their own.
+apiVersion: upgrade.cattle.io/v1
+kind: Plan
+metadata:
+  name: k3s
+  namespace: system-upgrade
+spec:
+  # renovate: datasource=github-releases depName=k3s-io/k3s
+  version: v1.37.2+k3s1
+  concurrency: 1
+  cordon: true
+  drain:
+    force: true
+    skipWaitForDeleteTimeout: 60
+    deleteEmptydirData: true
+    ignoreDaemonSets: true
+  serviceAccountName: system-upgrade
+  nodeSelector:
+    matchExpressions:
+      - { key: node-role.kubernetes.io/control-plane, operator: Exists }
+  tolerations:
+    - { operator: Exists }
+  upgrade:
+    image: rancher/k3s-upgrade

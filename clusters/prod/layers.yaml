@@ -1,0 +1,96 @@
+# The layers of the cluster, in the order Flux applies them. Each waits for the one it depends on to be Ready.
+# CRDs that do not come with a Helm chart (Gateway API, system-upgrade-controller), straight from upstream releases.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-crds
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 2m
+  timeout: 5m
+  sourceRef: { kind: GitRepository, name: flux-system }
+  path: ./clusters/prod/infrastructure/crds
+  prune: true
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-controllers
+  namespace: flux-system
+spec:
+  dependsOn: [{ name: infra-crds }]
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef: { kind: GitRepository, name: flux-system }
+  path: ./clusters/prod/infrastructure/controllers
+  prune: true
+  wait: true
+  decryption: { provider: sops, secretRef: { name: sops-age } }
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-configs
+  namespace: flux-system
+spec:
+  dependsOn: [{ name: infra-controllers }]
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef: { kind: GitRepository, name: flux-system }
+  path: ./clusters/prod/infrastructure/configs
+  prune: true
+  wait: true
+  decryption: { provider: sops, secretRef: { name: sops-age } }
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: monitoring
+  namespace: flux-system
+spec:
+  dependsOn: [{ name: infra-configs }]
+  interval: 1h
+  retryInterval: 2m
+  timeout: 15m
+  sourceRef: { kind: GitRepository, name: flux-system }
+  path: ./clusters/prod/monitoring
+  prune: true
+  wait: true
+  decryption: { provider: sops, secretRef: { name: sops-age } }
+---
+# Namespaces, secrets and platform-side objects of the apps, and the third-party apps (Helm charts).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: apps
+  namespace: flux-system
+spec:
+  dependsOn: [{ name: infra-configs }]
+  interval: 1h
+  retryInterval: 2m
+  timeout: 15m
+  sourceRef: { kind: GitRepository, name: flux-system }
+  path: ./clusters/prod/apps
+  prune: true
+  wait: true
+  decryption: { provider: sops, secretRef: { name: sops-age } }
+---
+# Our own apps at the versions in pins.env: a GitRepository and a deploy + smoke Kustomization pair each.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: releases
+  namespace: flux-system
+spec:
+  dependsOn: [{ name: apps }]
+  interval: 1h
+  retryInterval: 2m
+  sourceRef: { kind: GitRepository, name: flux-system }
+  path: ./clusters/prod/releases
+  prune: true
+  postBuild:
+    substituteFrom: [{ kind: ConfigMap, name: pins }]

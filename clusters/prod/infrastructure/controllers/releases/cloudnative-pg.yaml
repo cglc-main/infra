@@ -1,0 +1,33 @@
+# CloudNativePG (Postgres cluster `pg`, configs/postgres.yaml) and its Barman Cloud plugin (backups to Backblaze B2).
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cloudnative-pg
+spec:
+  interval: 1h
+  targetNamespace: cnpg-system
+  releaseName: cloudnative-pg
+  chart:
+    spec:
+      chart: cloudnative-pg
+      version: 0.29.2
+      sourceRef: { kind: HelmRepository, name: cnpg }
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: plugin-barman-cloud
+spec:
+  dependsOn: [{ name: cloudnative-pg }, { name: cert-manager }]
+  interval: 1h
+  targetNamespace: cnpg-system
+  releaseName: plugin-barman-cloud
+  chart:
+    spec:
+      chart: plugin-barman-cloud
+      version: 0.9.0
+      sourceRef: { kind: HelmRepository, name: cnpg }
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }

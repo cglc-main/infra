@@ -1,0 +1,23 @@
+# Flux web UI (flux.int.bulbashenko.com): sign-in through the SSO, client flux-web (cglc-main/auth). The groups claim
+# is impersonated for Kubernetes RBAC: infra-admins get flux-web-admin (flux-operator.yaml).
+apiVersion: v1
+kind: Secret
+metadata:
+    name: flux-web
+stringData:
+    config.yaml: ENC[AES256_GCM,data:nbB245mbeDqQslp3dbRHxPyNLnHq1H/6Jq1YL6d545D4LddabEHRp5Nn9dWBRafAPfZktIvnPNSW9YOln95o9Cqk7OqeAzP5wMhrlXIheijksA0/U5aJn4wfmfBF2nsPebTylH47+PzZ+B70CrQknRANT2BnXV+uTcRKxYdmM7M5XkQV/1/JqNLAByri97S2+TAWpTKic+r4X7zy/m6iTPYY5rhcv4xL5yerX5SYjIwT6NpUduVY9vVI4bXFco+pGxQn59cymjpgXPm2Q9aBuy3woOF/lbEdRKosJVezFaaN05qT4LqX9BuVdIdacCduOGBX6sP2I7S1ly2oDehxjRX5rIm/dsPJ3IxjSnj1HctWT1ODYFoRzAjpNE354ikeAfCTeQss94rOU/T9Oph5PTO+N3fwPAAxBi9eK0M5qNgx9jUoEvv9mjPpwhV0n1isDNc2gyyFfE2MeI3MacG1brXAobf7vwrWRQ2MhaiGmTcZREyoPajlkJ2OTemQ00MMBLrtDn7d2aJXYj7SQn+esffTr63UbGcWi2aMX0lPvwekqTUlR+ze52tYYxqAZZphlH7XoD5I/uth2cMYVWAxUHilCQFkKy+kIUjDyQb1jvG1MT2RWB8VSJTGI4F0m5QS7pm4hl9pMLDtgLi8z5JKw7k1KBeEZ829x7vOs2q338FMFkfwmnzPQTneY+YWxz0CO9U=,iv:9XZsPm3PQUdS8LT/fGMNEumMniShH3LB6pTaTVIBFEg=,tag:S3UXmp8qCFkw/k71/qMqFw==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSAweDk2a21VK2UrVFNLWGNP
+            Zm9RZVJ0Z2ZGS2d0UEpTbzQxdXdJVmRHc2dRCkluZExleFpMVS96dmU5YktjWXU5
+            VDhDeTVYelhsa0FVa3htdzZ3L000YzAKLS0tIDd2dTU1Y1JmOE5xa2liNEVGbGJG
+            OEY1SEpDR3F1YzVDVmhhZHhRTDdPancKR8XknOrLAzSUPOAr+qLCP2GpFLDhQ51+
+            ssAE7gDOC+TVI0K45aFlG4cjCjL+UYZJI4Dg30CuL4irqN22lnFZ3g==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1ajv2jeesvhqpn6pudqvjkvnujy32p22ytd78kt3r2yryqk79kazsjrv78h
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-11-25T21:27:03Z"
+    mac: ENC[AES256_GCM,data:qa8f69Mqb7/8kA7kHgPXR0RTCMy1m4OyXYYtDbVgSlCAhR8veBXOsgmVWi03vB5unv8diVNgPyBWn048YL2SAdp9F8VUSEdDHqlaQICIVnIGq4w0mC2mHphXkL6ihDJZ7C9qdkMyBkgqJHGfMHw+ImVHcDZYhKi1qzjH3TSjVL8=,iv:THzQeQdTYDPJEHlat4+l3Vgk/2MgyWLV2g9KTv1GMpE=,tag:dXQFggPC/hgydZbkoFysrw==,type:str]
+    version: 3.13.3

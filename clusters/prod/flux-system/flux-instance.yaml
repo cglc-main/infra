@@ -1,0 +1,33 @@
+# Flux itself. The operator keeps it on the latest 2.x release (security fixes included) and syncs this repo.
+apiVersion: fluxcd.controlplane.io/v1
+kind: FluxInstance
+metadata:
+  name: flux
+  annotations:
+    fluxcd.controlplane.io/reconcileEvery: 1h
+spec:
+  distribution:
+    version: "2.x"
+    registry: ghcr.io/fluxcd
+  components:
+    - source-controller
+    - kustomize-controller
+    - helm-controller
+    - notification-controller
+  cluster:
+    type: kubernetes
+    networkPolicy: true
+    domain: cluster.local
+  sync:
+    kind: GitRepository
+    url: https://github.com/cglc-main/infra.git
+    ref: refs/heads/main
+    path: clusters/prod
+  kustomize:
+    patches:
+      # The root sync applies flux-system/, which holds SOPS-encrypted Secrets.
+      - target: { kind: Kustomization, name: flux-system }
+        patch: |
+          - op: add
+            path: /spec/decryption
+            value: { provider: sops, secretRef: { name: sops-age } }

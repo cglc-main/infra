@@ -1,0 +1,24 @@
+# Alertmanager routes and Grafana's credentials. Every alert goes to Telegram; Watchdog (always firing while
+# alerting works) pings healthchecks.io every minute, which tells Telegram when the pings stop.
+apiVersion: v1
+kind: Secret
+metadata:
+    name: monitoring-values
+    namespace: flux-system
+stringData:
+    values.yaml: ENC[AES256_GCM,data:WMHOKs3AxY3+2r6oOJLnCnJjmdCNyOQ11iVaSeOmr+y9XdBCiJ7kUXZ7UzNIAw5FbJKRzbk7zH7mUP65T5dfAVpuUXm7+C8jLMAHQSwLkwattd+nxn92IEN2iXcG0Rio/19I+DoRq8U8fpj6XwCww+KDKMy3KNKXBgD9Ia9Ad2WsyQ+1FcqvXHAtEKSHAsNtENF++kbR5rw/nSJOtjqj2M0kRlhosrNviKY+8i+7WZyJvzhn9O6Xjr7uoawa9FmDezTKpyfWgOzXiWMlUQ0jYGR9MB9y8NdsbqhjfU4Il/Ry87qcZeMwUsh5tHZwxkTYa7LnmPLURQLGD49xukdjOBaV/+6IwHxScpb3lQNn+L7wgRBvjcsItLPTMX0ZvqoMdeO5rMSFVtw7Ge8nDzl5uUhpuJhqWMKAt/g/ma45WCosobTouRLUVB0WBy1mWZZCPAii+RRqRX3efmI0HaqpXanhe52v1vA+FwkG4sqZPsHqoRNF2rPExwH4HoXFFPye2FeIp/crFEs007V4SYQsUmDAYTPmQF0rZSPR4tUnF+UCh2iy1+FcpG/W+0SGGBaeA7JbMwiUyQu9qDZ2XcxRr7zjd+jqegt7q/Ml1I55BlYKr41LP05qxPHP/Njs60+mQhb2qpmMKGlzcHcZgnAI0rplva81kWwUXu3Hudm/sHlgg19BbL63YijN9AH+kQnKQ7gB+EQJHo+g46wAP9hyvH8aztBkCCHiP66Wd1jVSqP4Ob/jMsTPpa1B/0Dx3zf8R+SeUcl42oJFNHi117YN6C5p0eS/dykYwj1hb2AgQioYiU0H0AwSEC/xA3YgJcpWjICHpBcQHEz/HUKXckbYvewj0X1ujV0kOQcjQ8NiWa9j9z8roT98Qq/0wM/y4ip+J0uh/F8IwYEQd7COjeCD0Akh91dBSrO/WK9kPJdu8ttte0UTiiqHhqFo2j1AuI3mA6UcHvwruX/e60Km0vGedDGQ0q2FQM9RyNLhQZsSmQLCh5OieKqbB8wjXXfDcjyUVfV6zJ943yWZWFhQeQQ1YqO8XcIkKC3bYWwudjpoxSK4y/5nZsUj0vmvfk9keJjYXPXlXfDI8uUyIq9GgR47Kv/MIfxYcW89n8+j2OriP5REaTcTKYGuU81RFw5OQiPyti+Yo09uryq7AbkHzk9mLddgWmMDiIUFHa72bjLuP4+lwKCih/EMQq7IH0VE8gnGHoSXLAvIKUZFuGEGRa8Acosj4nP+su0N6N4YoABqoqRl45oaWbSYdZQW2NpHAVjfNXR3LHgzLKJuF48JGEtTmUitythPEykLfNl3lJ6VEmSBaspKdJud2AqURuOKbER2eGvdPDz4WFcgE2CwBpV7trxyTelBNNoLUJ6hbeJ6ZWOkNTneaxhnQiZiPixKdIHoD57SJ/UVcR5exSW9/UdBlIgpKYraLgyD4CA0qvlH+B1tOEe3tRkO2weLQb/0+wS2PuZsQJNtnVehH8nWIzMERk2weM/6ZGWhiPpcqFf46SZXzHdtc/+L1NOUjZqbaWeYtN5tHmvMhg4p8ORKiPZyr/EQLE+cuRvJZJKdUtLCjRnz8+u7dHhXzKtVuI1W+1dTXFXrVS4=,iv:bMlCIy3vplTKUWhhGPC4o76C2RMTXtyfrl3M0RmyJD8=,tag:vIOjixntJgsleEEmsrgBoA==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBSeU9vQTc0M2lGM2Fja3Z0
+            RUJnMlZBMFByNjRMRmQzYUVBRmtBUFJ3akdnCmRFbmV4c2duVXQwRm8xWG9sWDdD
+            QWI3ZFl4MjAyTEVpUW93VUJQNEVybk0KLS0tIFlyUFdtWlhwb0hYQ1UwdVNKWTB5
+            Vm85aEhUQWgyVEZBdFl6U2tyTVhGT3cKU6dplWbbAFZUnxOX+Qil0gHVHBjOPsgp
+            HMQFBjKylllIkn2GwS7I3LO+cGzyRprvcXh2p0x34du9gLnp5BoSzA==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1ajv2jeesvhqpn6pudqvjkvnujy32p22ytd78kt3r2yryqk79kazsjrv78h
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-11-25T22:30:20Z"
+    mac: ENC[AES256_GCM,data:NwGFSbl2wtpUzxj7C27Kw+elBj+IVhLm9tLRqpA74THvA6MoGVij8bNVVILkSXJEXBwdp7FR0T8qyB5xk6R6qPH4a3EtFJ1XeOXoHRWyqgzeC8b1RnMyIKsmL4c+bIvDiIVKpk6xZA1Zcf5YK6MLaufiSf3IGbptI5f33fu7aRU=,iv:StMzC25aNEQ2uW8OOd2iLGHzjNGJ7WpAYCl/jrrcyRs=,tag:2nGGVOhnHxjq+Pf1p4yUYw==,type:str]
+    version: 3.13.3

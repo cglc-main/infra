@@ -1,0 +1,12 @@
+# Kubernetes' own defaults (requests only, no limits): the scheduler never sees a container as free. VPA replaces
+# them with measured values.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: defaults
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: 10m
+        memory: 64Mi

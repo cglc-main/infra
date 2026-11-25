@@ -1,0 +1,16 @@
+# Namespace labels for Goldilocks: it creates a VPA for every workload in the namespace, which sets requests from real
+# usage, in place where possible, and never touches limits.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+patches:
+  - target: { kind: Namespace }
+    patch: |
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: any
+        labels:
+          goldilocks.fairwinds.com/enabled: "true"
+        annotations:
+          goldilocks.fairwinds.com/vpa-update-mode: InPlaceOrRecreate
+          goldilocks.fairwinds.com/vpa-resource-policy: '{"containerPolicies":[{"containerName":"*","controlledValues":"RequestsOnly"}]}'

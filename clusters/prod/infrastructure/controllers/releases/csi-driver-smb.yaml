@@ -1,0 +1,20 @@
+# SMB volumes on the Hetzner Storage Box (Nextcloud, Stalwart's mail): any node can mount them, so the pods that use
+# them are not bound to a node. The volumes themselves are static PVs next to each app (apps/*/storage.yaml).
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: csi-driver-smb
+spec:
+  interval: 1h
+  targetNamespace: kube-system
+  releaseName: csi-driver-smb
+  chart:
+    spec:
+      chart: csi-driver-smb
+      version: 1.20.4
+      sourceRef: { kind: HelmRepository, name: csi-driver-smb }
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }
+  values:
+    controller: { replicas: 1 }
+    windows: { enabled: false }

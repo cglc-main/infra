@@ -1,0 +1,48 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: auth
+spec:
+  interval: 1h
+  url: https://github.com/cglc-main/auth
+  ref: { tag: "v${AUTH_VERSION}" }
+  ignore: |
+    /*
+    !/kustomization.yaml
+    !/deploy/
+    !/ory/
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: auth
+spec:
+  interval: 1h
+  retryInterval: 2m
+  # Longer than the slowest rollout (minReadySeconds and progressDeadlineSeconds in the app's base).
+  timeout: 10m
+  sourceRef: { kind: GitRepository, name: auth }
+  path: ./
+  targetNamespace: auth
+  prune: true
+  wait: true
+  images:
+    - { name: ghcr.io/cglc-main/auth-ui, newTag: "${AUTH_VERSION}" }
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: auth-smoke
+spec:
+  dependsOn: [{ name: auth }]
+  interval: 1h
+  retryInterval: 5m
+  timeout: 6m
+  sourceRef: { kind: GitRepository, name: auth }
+  path: ./deploy/smoke
+  targetNamespace: auth
+  prune: true
+  wait: true
+  force: true
+  images:
+    - { name: ghcr.io/cglc-main/auth-e2e, newTag: "${AUTH_VERSION}" }

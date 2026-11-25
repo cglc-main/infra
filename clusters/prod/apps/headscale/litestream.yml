@@ -1,0 +1,5 @@
+# Continuous replication of Headscale's database to B2 (credentials: Secret headscale-litestream).
+dbs:
+  - path: /var/lib/headscale/db.sqlite
+    replica:
+      url: s3://cglc-bucket/headscale?endpoint=s3.eu-central-003.backblazeb2.com

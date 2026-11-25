@@ -1,0 +1,91 @@
+# VictoriaMetrics (metrics, 14 days), VictoriaLogs (every pod's logs, 14 days), vmalert with the standard
+# kube-prometheus rules, Alertmanager (Telegram, healthchecks.io), Grafana (grafana.int, sign-in through the SSO).
+# Receivers, chat and secrets: stack.sops.yaml (valuesFrom). Logs for people and for AI agents: logs.int, or the
+# official CLI `vlogscli` against it (docs: services/monitoring.md).
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: monitoring
+spec:
+  interval: 1h
+  timeout: 15m
+  targetNamespace: monitoring
+  releaseName: vm
+  chart:
+    spec:
+      chart: victoria-metrics-k8s-stack
+      version: 0.99.0
+      sourceRef: { kind: HelmRepository, name: victoriametrics }
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }
+  valuesFrom:
+    - { kind: Secret, name: monitoring-values, valuesKey: values.yaml }
+  values:
+    fullnameOverride: vm
+    victoria-metrics-operator:
+      operator: { disable_prometheus_converter: false }
+    vmsingle:
+      spec:
+        retentionPeriod: 14d
+        priorityClassName: tier-3
+        storage:
+          storageClassName: local-path
+          resources: { requests: { storage: 10Gi } }
+    vlsingle:
+      enabled: true
+      spec:
+        retentionPeriod: 14d
+        priorityClassName: tier-3
+        storage:
+          storageClassName: local-path
+          resources: { requests: { storage: 10Gi } }
+    vlagent:
+      enabled: true
+      spec:
+        priorityClassName: tier-3
+        k8sCollector: { enabled: true }
+    vmagent:
+      spec: { priorityClassName: tier-3 }
+    vmalert:
+      spec: { priorityClassName: tier-3 }
+    alertmanager:
+      spec:
+        priorityClassName: tier-3
+        externalURL: https://grafana.int.bulbashenko.com
+    grafana:
+      priorityClassName: tier-3
+      admin:
+        existingSecret: grafana-admin
+        userKey: admin-user
+        passwordKey: admin-password
+      envFromSecret: grafana-oidc
+      grafana.ini:
+        server:
+          root_url: https://grafana.int.bulbashenko.com
+        auth:
+          oauth_auto_login: true
+          signout_redirect_url: https://auth.bulbashenko.com/oauth2/sessions/logout
+        auth.generic_oauth:
+          enabled: true
+          name: SSO
+          client_id: grafana
+          scopes: openid offline_access profile email groups
+          auth_url: https://auth.bulbashenko.com/oauth2/auth
+          token_url: https://auth.bulbashenko.com/oauth2/token
+          api_url: https://auth.bulbashenko.com/userinfo
+          use_pkce: true
+          allow_sign_up: true
+          login_attribute_path: preferred_username
+          groups_attribute_path: groups
+          role_attribute_path: contains(groups[*], 'infra-admins') && 'GrafanaAdmin' || 'Viewer'
+          role_attribute_strict: true
+          allow_assign_grafana_admin: true
+    prometheus-node-exporter:
+      priorityClassName: tier-3
+    kube-state-metrics:
+      priorityClassName: tier-3
+    # k3s runs these inside its own process: no separate targets to scrape (their rules are off with them).
+    kubeControllerManager: { enabled: false }
+    kubeScheduler: { enabled: false }
+    kubeEtcd: { enabled: false }
+    kubeProxy: { enabled: false }

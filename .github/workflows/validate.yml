@@ -1,0 +1,67 @@
+# Required check of every pull request (Renovate's included, which then merge themselves): everything Flux and
+# OpenTofu would apply must build and validate. Docs: delivery.md.
+name: validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  manifests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Tools
+        env:
+          # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize
+          KUSTOMIZE: v5.8.3
+          # renovate: datasource=github-releases depName=yannh/kubeconform
+          KUBECONFORM: v0.8.0
+        run: |
+          curl -fsSL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE}/kustomize_${KUSTOMIZE}_linux_amd64.tar.gz" | sudo tar -xz -C /usr/local/bin
+          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM}/kubeconform-linux-amd64.tar.gz" | sudo tar -xz -C /usr/local/bin
+      - name: Every Kustomization builds and validates
+        run: |
+          set -euo pipefail
+          find clusters -name kustomization.yaml -exec dirname {} \; | sort | while read -r dir; do
+            echo "::group::$dir"
+            # Flux drops the SOPS metadata of encrypted Secrets before applying; so does this check.
+            kustomize build "$dir" | yq 'del(.sops)' | kubeconform -strict -summary -ignore-missing-schemas \
+              -schema-location default \
+              -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+            echo "::endgroup::"
+          done
+      - name: Secrets are committed encrypted only
+        run: |
+          set -euo pipefail
+          bad=0
+          for f in $(git ls-files '*.sops.*' | grep -vx '.sops.yaml'); do
+            grep -q '^sops:' "$f" || grep -q '"sops":' "$f" || { echo "::error file=$f::not encrypted"; bad=1; }
+          done
+          # A plain Secret outside *.sops.* files is a mistake too.
+          for f in $(git ls-files 'clusters/**.yaml' 'components/**.yaml' | grep -v '\.sops\.'); do
+            yq -e 'select(.kind == "Secret")' "$f" >/dev/null 2>&1 && { echo "::error file=$f::Secret outside a .sops. file"; bad=1; }
+          done
+          exit $bad
+
+  tofu:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: opentofu/setup-opentofu@v2
+      - run: tofu -chdir=tofu fmt -check -recursive
+      - run: tofu -chdir=tofu init -backend=false -input=false
+      - run: tofu -chdir=tofu validate
+
+  workflows:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: actionlint
+        run: |
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          ./actionlint -color

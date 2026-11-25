@@ -1,0 +1,71 @@
+# OpenTofu: a pull request that touches tofu/ or hosts/ gets the plan as a comment; after the merge, the apply waits for
+# a person's approval (GitHub Environment `production`). Docs: delivery.md.
+name: tofu
+
+on:
+  pull_request:
+    paths: [tofu/**, hosts/**]
+  push:
+    branches: [main]
+    paths: [tofu/**, hosts/**]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: tofu
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: "1"
+  TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN }}
+  TF_VAR_cloudflare_token: ${{ secrets.CLOUDFLARE_TOKEN }}
+  TF_VAR_state_passphrase: ${{ secrets.TOFU_STATE_PASSPHRASE }}
+  TF_VAR_keepalived_hcloud_token: ${{ secrets.KEEPALIVED_HCLOUD_TOKEN }}
+  TF_VAR_k3s_token: ${{ secrets.K3S_TOKEN }}
+  TF_VAR_etcd_s3_access_key: ${{ secrets.B2_KEY_ID }}
+  TF_VAR_etcd_s3_secret_key: ${{ secrets.B2_APP_KEY }}
+  TF_VAR_admin_ipv4: ${{ vars.ADMIN_IPV4 }}
+  TF_VAR_ssh_from_mesh_only: ${{ vars.SSH_FROM_MESH_ONLY || 'false' }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.B2_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APP_KEY }}
+
+jobs:
+  plan:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: opentofu/setup-opentofu@v2
+        with:
+          tofu_wrapper: false
+      - run: tofu -chdir=tofu init -input=false
+      - id: plan
+        run: |
+          set -o pipefail
+          tofu -chdir=tofu plan -input=false -no-color -lock=false | tee plan.txt
+      - name: Comment
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "### tofu plan"
+            echo '```'
+            tail -c 60000 plan.txt
+            echo '```'
+          } > comment.md
+          gh pr comment ${{ github.event.pull_request.number }} --body-file comment.md --edit-last --create-if-none
+
+  apply:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+      - uses: opentofu/setup-opentofu@v2
+        with:
+          tofu_wrapper: false
+      - run: tofu -chdir=tofu init -input=false
+      - run: tofu -chdir=tofu apply -input=false -auto-approve

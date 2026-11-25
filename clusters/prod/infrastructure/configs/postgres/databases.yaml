@@ -1,0 +1,61 @@
+# One database per service, owned by its role (cluster.yaml).
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: kratos
+spec:
+  cluster: { name: pg }
+  name: kratos
+  owner: kratos
+  ensure: present
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: hydra
+spec:
+  cluster: { name: pg }
+  name: hydra
+  owner: hydra
+  ensure: present
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: keto
+spec:
+  cluster: { name: pg }
+  name: keto
+  owner: keto
+  ensure: present
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: site
+spec:
+  cluster: { name: pg }
+  name: site
+  owner: site
+  ensure: present
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: nextcloud
+spec:
+  cluster: { name: pg }
+  name: nextcloud
+  owner: nextcloud
+  ensure: present
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: stalwart
+spec:
+  cluster: { name: pg }
+  name: stalwart
+  owner: stalwart
+  ensure: present

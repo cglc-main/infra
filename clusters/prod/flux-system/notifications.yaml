@@ -1,0 +1,100 @@
+# Where Flux reports. Credentials: notifications.sops.yaml (Telegram bot, GitHub App cglc-auto-bot).
+#   telegram        failures of anything, and every deploy of our apps
+#   github-<app>    commit status on the app's released commit, once its smoke test has run
+#   infra-dispatch  a failed deploy of an app triggers revert-pin in cglc-main/infra (docs: delivery.md)
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: telegram
+spec:
+  type: telegram
+  channel: "-4765757619" # chat id, not a secret
+  secretRef: { name: telegram }
+---
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: github-auth
+spec:
+  type: github
+  address: https://github.com/cglc-main/auth
+  secretRef: { name: github-app }
+---
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: github-bulbashenko-com
+spec:
+  type: github
+  address: https://github.com/cglc-main/bulbashenko.com
+  secretRef: { name: github-app }
+---
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: infra-dispatch
+spec:
+  type: githubdispatch
+  address: https://github.com/cglc-main/infra
+  secretRef: { name: github-app }
+---
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: failures
+spec:
+  providerRef: { name: telegram }
+  eventSeverity: error
+  eventSources:
+    - { kind: GitRepository, name: "*" }
+    - { kind: OCIRepository, name: "*" }
+    - { kind: HelmRepository, name: "*" }
+    - { kind: Kustomization, name: "*" }
+    - { kind: HelmRelease, name: "*" }
+    - { kind: FluxInstance, name: "*" }
+---
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: deploys
+spec:
+  providerRef: { name: telegram }
+  eventSeverity: info
+  eventSources:
+    - { kind: Kustomization, name: auth-smoke }
+    - { kind: Kustomization, name: bulbashenko-com-smoke }
+  inclusionList: [".*Reconciliation finished.*"]
+---
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: status-auth
+spec:
+  providerRef: { name: github-auth }
+  eventSeverity: info
+  eventSources: [{ kind: Kustomization, name: auth-smoke }]
+---
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: status-bulbashenko-com
+spec:
+  providerRef: { name: github-bulbashenko-com }
+  eventSeverity: info
+  eventSources: [{ kind: Kustomization, name: bulbashenko-com-smoke }]
+---
+# A failed rollout (health check timeout) or smoke test of an app: revert-pin decides whether the failing version
+# is the pinned one and reverts it (cglc-main/infra .github/workflows/revert-pin.yml).
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: revert-on-failure
+spec:
+  providerRef: { name: infra-dispatch }
+  eventSeverity: error
+  eventSources:
+    - { kind: Kustomization, name: auth }
+    - { kind: Kustomization, name: auth-smoke }
+    - { kind: Kustomization, name: bulbashenko-com }
+    - { kind: Kustomization, name: bulbashenko-com-smoke }
+  inclusionList: [".*[Hh]ealth check failed.*", ".*timeout.*", ".*failed.*Job.*", ".*Job.*failed.*"]

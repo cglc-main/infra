@@ -1,0 +1,16 @@
+# Entry point of the cluster: the FluxInstance syncs this directory (flux-system/flux-instance.yaml).
+# Everything else is a Flux Kustomization in layers.yaml, applied in dependency order.
+# Documentation: https://github.com/cglc-main/docs
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - flux-system
+  - layers.yaml
+configMapGenerator:
+  # The released version of each app, one line each. Renovate bumps them (renovate.json), Flux substitutes them
+  # into releases/ (postBuild.substituteFrom), and revert-pin reverts them when a deploy fails.
+  - name: pins
+    namespace: flux-system
+    envs: [pins.env]
+generatorOptions:
+  disableNameSuffixHash: true

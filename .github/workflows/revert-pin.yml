@@ -1,0 +1,65 @@
+# A deploy of an app failed (rollout or smoke test): Flux sends the event here (repository_dispatch, provider
+# infra-dispatch in clusters/prod/flux-system/notifications.yaml). If the failing version is the one pins.env runs
+# now, the bot reverts the commit that set it, through a pull request that merges itself; Renovate does not offer that
+# version again. Docs: delivery.md.
+name: revert-pin
+
+on:
+  repository_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: revert-pin
+  cancel-in-progress: false
+
+jobs:
+  revert:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Which app and version
+        id: event
+        env:
+          KIND_NAME: ${{ github.event.action }}
+          REVISION: ${{ github.event.client_payload.metadata.revision }}
+        run: |
+          # event: Kustomization/<name>.flux-system; <name> is the app or <app>-smoke.
+          name=${KIND_NAME#Kustomization/}; name=${name%%.*}; app=${name%-smoke}
+          var=$(echo "$app" | tr 'a-z-' 'A-Z_')_VERSION
+          version=${REVISION%%@*}; version=${version#v}
+          echo "var=$var" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "app=$app" >> "$GITHUB_OUTPUT"
+      - id: token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+      - uses: actions/checkout@v7
+        with:
+          token: ${{ steps.token.outputs.token }}
+          fetch-depth: 0
+      - name: Revert the pin
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          VAR: ${{ steps.event.outputs.var }}
+          VERSION: ${{ steps.event.outputs.version }}
+          APP: ${{ steps.event.outputs.app }}
+        run: |
+          set -euo pipefail
+          pins=clusters/prod/pins.env
+          if ! grep -qx "${VAR}=${VERSION}" "$pins"; then
+            echo "${APP} ${VERSION} is not what pins.env runs now: nothing to revert."
+            exit 0
+          fi
+          commit=$(git log -n1 --format=%H -G "^${VAR}=${VERSION}$" -- "$pins")
+          git config user.name "cglc-auto-bot[bot]"
+          git config user.email "361313835+cglc-auto-bot[bot]@users.noreply.github.com"
+          branch="revert/${APP}-${VERSION}"
+          git switch -c "$branch"
+          git revert --no-edit "$commit"
+          git push origin "$branch"
+          gh pr create --title "revert: ${APP} ${VERSION} failed its deploy" \
+            --body "Flux reported: ${{ github.event.client_payload.message }}" --label revert
+          gh pr merge --auto --squash "$branch"

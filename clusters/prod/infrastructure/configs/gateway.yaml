@@ -1,0 +1,45 @@
+# The cluster's one Gateway, traefik/main. TLS ends here with one certificate for every public name. Listeners:
+#   apex        bulbashenko.com
+#   subdomains  *.bulbashenko.com (one label: www, auth, cloud, mail, hs)
+#   int         *.int.bulbashenko.com, reachable only through the mesh (routes add the middleware mesh-only)
+# Port 80 redirects to 443 at Traefik's entry point, before any route.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard
+  namespace: traefik
+spec:
+  secretName: wildcard-tls
+  issuerRef: { kind: ClusterIssuer, name: letsencrypt }
+  privateKey: { algorithm: ECDSA, size: 256, rotationPolicy: Always }
+  dnsNames:
+    - bulbashenko.com
+    - "*.bulbashenko.com"
+    - "*.int.bulbashenko.com"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: main
+  namespace: traefik
+spec:
+  gatewayClassName: traefik
+  listeners:
+    - name: apex
+      protocol: HTTPS
+      port: 443
+      hostname: bulbashenko.com
+      tls: { mode: Terminate, certificateRefs: [{ name: wildcard-tls }] }
+      allowedRoutes: { namespaces: { from: All } }
+    - name: subdomains
+      protocol: HTTPS
+      port: 443
+      hostname: "*.bulbashenko.com"
+      tls: { mode: Terminate, certificateRefs: [{ name: wildcard-tls }] }
+      allowedRoutes: { namespaces: { from: All } }
+    - name: int
+      protocol: HTTPS
+      port: 443
+      hostname: "*.int.bulbashenko.com"
+      tls: { mode: Terminate, certificateRefs: [{ name: wildcard-tls }] }
+      allowedRoutes: { namespaces: { from: All } }

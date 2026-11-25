@@ -1,0 +1,56 @@
+# Applies plan.ndjson to Stalwart (stalwart-cli apply: upserts, so applying again changes nothing). The ConfigMap's
+# name carries the plan's hash, so a changed plan changes this Job and Flux runs it again (force). The plan's
+# ${VARIABLES} come from the Secret stalwart; the CLI signs in as the recovery administrator.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: config
+  annotations:
+    kustomize.toolkit.fluxcd.io/force: enabled
+spec:
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      initContainers:
+        - name: render
+          image: docker.io/library/alpine:3.22
+          envFrom: [{ secretRef: { name: stalwart } }]
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              until wget -q -O /dev/null http://stalwart:8080/healthz/ready; do sleep 5; done
+              sed "s|\${NOREPLY_PASSWORD}|$NOREPLY_PASSWORD|g" /plan/plan.ndjson > /work/plan.ndjson
+          securityContext: &restricted
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: plan, mountPath: /plan }
+            - { name: work, mountPath: /work }
+      containers:
+        - name: apply
+          image: ghcr.io/stalwartlabs/cli:2.0.0
+          args: [apply, --file, /work/plan.ndjson]
+          env:
+            - { name: STALWART_URL, value: "http://stalwart:8080" }
+            - { name: HOME, value: /work }
+            - { name: XDG_CACHE_HOME, value: /work/cache }
+            - name: STALWART_USER
+              valueFrom: { secretKeyRef: { name: stalwart, key: RECOVERY_ADMIN_USER } }
+            - name: STALWART_PASSWORD
+              valueFrom: { secretKeyRef: { name: stalwart, key: RECOVERY_ADMIN_PASSWORD } }
+          securityContext: *restricted
+          volumeMounts:
+            - { name: work, mountPath: /work }
+      volumes:
+        - { name: plan, configMap: { name: stalwart-plan } }
+        - { name: work, emptyDir: {} }

@@ -1,0 +1,33 @@
+# Message bodies: the Storage Box sub-account `stalwart` over SMB 3 (any node mounts it). Protected by the Storage
+# Box's snapshots. Never pruned (Retain, prune disabled). Stalwart runs as 2000.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: stalwart
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  capacity: { storage: 50Gi }
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  claimRef: { namespace: stalwart, name: stalwart }
+  mountOptions: [vers=3.1.1, seal, hard, noserverino, noperm, uid=2000, gid=2000, dir_mode=0700, file_mode=0600]
+  csi:
+    driver: smb.csi.k8s.io
+    volumeHandle: storage-box-stalwart
+    volumeAttributes:
+      source: "//u689140-sub2.your-storagebox.de/u689140-sub2"
+    nodeStageSecretRef: { name: storage-box, namespace: stalwart }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: stalwart
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: stalwart
+  resources: { requests: { storage: 50Gi } }

@@ -1,0 +1,56 @@
+# The Flux Operator manages Flux itself (flux-instance.yaml) and serves the Flux web UI on flux.int.bulbashenko.com.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: flux-operator
+spec:
+  interval: 1h
+  url: oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator
+  ref:
+    tag: 0.63.1
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: flux-operator
+spec:
+  interval: 1h
+  releaseName: flux-operator
+  serviceAccountName: flux-operator
+  chartRef: { kind: OCIRepository, name: flux-operator }
+  values:
+    priorityClassName: system-cluster-critical
+    web:
+      # The config (with the OIDC client secret) is the Secret flux-web (flux-web.sops.yaml).
+      configSecretName: flux-web
+      # The chart's policy admits pods only; Traefik runs on the host network. See allow-flux-web below.
+      networkPolicy: { create: false }
+      httpRoute:
+        enabled: true
+        parentRefs: [{ name: main, namespace: traefik, sectionName: int }]
+        hostnames: [flux.int.bulbashenko.com]
+---
+# People in the SSO group infra-admins administer Flux in the web UI (the UI impersonates the groups claim).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: flux-web-infra-admins
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: flux-web-admin }
+subjects:
+  - { apiGroup: rbac.authorization.k8s.io, kind: Group, name: infra-admins }
+---
+# Flux's own policies (FluxInstance cluster.networkPolicy) admit only pods of flux-system. The web UI port must also
+# be reachable from Traefik, which runs on the host network and so cannot be selected by labels.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-flux-web
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: flux-operator }
+  policyTypes: [Ingress]
+  ingress:
+    - ports: [{ protocol: TCP, port: 9080 }]

@@ -1,0 +1,22 @@
+# cert-manager: Let's Encrypt certificates (DNS-01 at Cloudflare) and the internal CA of the Postgres certificate.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cert-manager
+spec:
+  interval: 1h
+  targetNamespace: cert-manager
+  releaseName: cert-manager
+  chart:
+    spec:
+      chart: cert-manager
+      version: v1.21.3
+      sourceRef: { kind: HelmRepository, name: jetstack }
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }
+  values:
+    crds: { enabled: true, keep: true }
+    # Check DNS-01 records at public resolvers, not at the cluster DNS.
+    extraArgs:
+      - --dns01-recursive-nameservers-only
+      - --dns01-recursive-nameservers=1.1.1.1:53,9.9.9.9:53

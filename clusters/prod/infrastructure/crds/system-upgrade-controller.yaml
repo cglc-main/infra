@@ -1,0 +1,42 @@
+# system-upgrade-controller: upgrades k3s node by node (configs/k3s-upgrade.yaml). Upstream ships no chart; its repo
+# is a Kustomize base. The image tag is set here because the base lags behind its own release tag.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: system-upgrade-controller
+spec:
+  interval: 24h
+  url: https://github.com/rancher/system-upgrade-controller
+  ref:
+    tag: v0.21.1
+  ignore: |
+    /*
+    !/kustomization.yaml
+    !/manifests/
+    !/pkg/crds/yaml/generated/
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: system-upgrade-controller-crds
+spec:
+  interval: 24h
+  sourceRef: { kind: GitRepository, name: system-upgrade-controller }
+  path: ./pkg/crds/yaml/generated
+  prune: false
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: system-upgrade-controller
+spec:
+  dependsOn: [{ name: system-upgrade-controller-crds }]
+  interval: 24h
+  sourceRef: { kind: GitRepository, name: system-upgrade-controller }
+  path: ./
+  prune: true
+  wait: true
+  images:
+    # renovate: datasource=github-releases depName=rancher/system-upgrade-controller
+    - { name: rancher/system-upgrade-controller, newTag: v0.21.1 }

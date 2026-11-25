@@ -1,0 +1,27 @@
+# Goldilocks creates a VPA for every workload in namespaces labelled goldilocks.fairwinds.com/enabled (components/
+# defaults sets the label and the update mode), and shows the recommendations on goldilocks.int.bulbashenko.com.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: goldilocks
+spec:
+  dependsOn: [{ name: vpa }]
+  interval: 1h
+  targetNamespace: vpa
+  releaseName: goldilocks
+  chart:
+    spec:
+      chart: goldilocks
+      version: 11.3.1
+      sourceRef: { kind: HelmRepository, name: fairwinds }
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }
+  values:
+    vpa: { enabled: false }
+    controller:
+      flags:
+        # A Job runs once; a VPA cannot help it.
+        ignore-controller-kind: Job,CronJob
+    dashboard:
+      enabled: true
+      replicaCount: 1

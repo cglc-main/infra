@@ -1,0 +1,180 @@
+# Nextcloud from the official chart and image. Majors must be upgraded one at a time (Renovate: majors wait for a
+# person). No upgrade rollback: an older image refuses a database the newer one has migrated; fix forward.
+#   occ: kubectl -n nextcloud exec deploy/nextcloud -c nextcloud -- su -s /bin/sh www-data -c 'php occ <command>'
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: nextcloud
+spec:
+  interval: 1h
+  timeout: 20m
+  targetNamespace: nextcloud
+  releaseName: nextcloud
+  chart:
+    spec:
+      chart: nextcloud
+      version: 9.4.5
+      sourceRef: { kind: HelmRepository, name: nextcloud }
+  install: { remediation: { retries: 2 } }
+  upgrade: { remediation: { retries: 0 } }
+  valuesFrom:
+    - kind: ConfigMap
+      name: nextcloud-start
+      valuesKey: start.sh
+      targetPath: nextcloud.hooks.before-starting
+  # The chart keeps the data directory in its main volume; it must be on the Storage Box instead, and config.php's
+  # copy (/srv/state) next to it. One volume, two subdirectories (namespace/storage.yaml).
+  postRenderers:
+    - kustomize:
+        patches:
+          - target: { kind: Deployment, name: nextcloud }
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata: { name: nextcloud }
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: nextcloud
+                        volumeMounts:
+                          - { name: storage-box, mountPath: /var/www/html/data, subPath: data }
+                          - { name: storage-box, mountPath: /srv/state, subPath: state }
+                      - name: nextcloud-cron
+                        volumeMounts:
+                          - { name: storage-box, mountPath: /var/www/html/data, subPath: data }
+                          - { name: storage-box, mountPath: /srv/state, subPath: state }
+                    volumes:
+                      - name: storage-box
+                        persistentVolumeClaim: { claimName: nextcloud }
+  values:
+    image:
+      # renovate: datasource=docker depName=nextcloud
+      tag: 35.0.3-apache
+    priorityClassName: tier-2
+    persistence: { enabled: false }
+    nextcloud:
+      host: cloud.bulbashenko.com
+      trustedDomains: [cloud.bulbashenko.com, nextcloud.nextcloud.svc.cluster.local]
+      existingSecret:
+        enabled: true
+        secretName: nextcloud
+        usernameKey: admin-user
+        passwordKey: admin-password
+        smtpUsernameKey: smtp-username
+        smtpPasswordKey: smtp-password
+        smtpHostKey: smtp-host
+      mail:
+        enabled: true
+        fromAddress: noreply
+        domain: bulbashenko.com
+        smtp: { secure: ssl, port: 465, authtype: LOGIN }
+      configs:
+        cluster.config.php: |-
+          <?php
+          $CONFIG = [
+            'overwrite.cli.url' => 'https://cloud.bulbashenko.com',
+            'overwriteprotocol' => 'https',
+            // Traefik runs on the host network and reaches pods from the pod network.
+            'trusted_proxies' => ['10.42.0.0/16'],
+            // SMB reports the mode from the mount options, which Nextcloud cannot change.
+            'check_data_directory_permissions' => false,
+            'maintenance_window_start' => 1,
+            'default_phone_region' => 'SK',
+            // People come from the SSO; they do not manage names or passwords here.
+            'allow_user_to_change_display_name' => false,
+            'lost_password_link' => 'disabled',
+            // Versions are in Git: no update checks or web updater.
+            'updatechecker' => false,
+            'upgrade.disable-web' => true,
+            'skeletondirectory' => '',
+            // Logs to stderr (VictoriaLogs).
+            'log_type' => 'errorlog',
+            'loglevel' => 2,
+          ];
+      extraEnv:
+        # libpq verifies Postgres's certificate against the internal CA; no client certificate.
+        - { name: PGSSLMODE, value: verify-full }
+        - { name: PGSSLROOTCERT, value: /etc/internal-ca/ca.crt }
+        - { name: PGSSLCERTMODE, value: disable }
+        - { name: PHP_MEMORY_LIMIT, value: 512M }
+        - { name: PHP_UPLOAD_LIMIT, value: 1G }
+        - name: OIDC_CLIENT_SECRET
+          valueFrom: { secretKeyRef: { name: nextcloud, key: oidc-client-secret } }
+        - name: SITE_PASSWORD
+          valueFrom: { secretKeyRef: { name: nextcloud, key: site-password } }
+      extraVolumes:
+        - name: internal-ca
+          configMap: { name: internal-ca }
+      extraVolumeMounts:
+        - { name: internal-ca, mountPath: /etc/internal-ca, readOnly: true }
+      # Lays out an empty code volume: the image's code, and config.php from the Storage Box. Without a saved
+      # config.php the entrypoint installs a new instance, unless the files already hold one: then it stops rather
+      # than install a second instance over them.
+      extraInitContainers:
+        - name: prepare
+          image: docker.io/library/nextcloud:35.0.3-apache
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              html=/var/www/html
+              if [ ! -f /srv/state/config.php ]; then
+                if ls -d /var/www/html/data/appdata_* >/dev/null 2>&1; then
+                  echo "prepare: the files hold an instance but /srv/state has no config.php; not installing over it" >&2
+                  exit 1
+                fi
+                echo "prepare: no config.php saved, the entrypoint installs a new instance"
+                exit 0
+              fi
+              echo "prepare: the image's code, config.php from the Storage Box"
+              rsync -rlD --chown www-data:root --delete --exclude-from=/upgrade.exclude /usr/src/nextcloud/ "$html/"
+              for dir in config custom_apps themes; do
+                rsync -rlD --chown www-data:root --ignore-existing "/usr/src/nextcloud/$dir/" "$html/$dir/"
+              done
+              install -o www-data -g www-data -m 0640 /srv/state/config.php "$html/config/config.php"
+              # Last, as the entrypoint does: its presence tells the entrypoint the code is in place.
+              install -o www-data -g root -m 0644 /usr/src/nextcloud/version.php "$html/version.php"
+          volumeMounts:
+            - { name: nextcloud-main, mountPath: /var/www/html, subPath: html }
+            - { name: nextcloud-main, mountPath: /var/www/html/config, subPath: config }
+            - { name: nextcloud-main, mountPath: /var/www/html/custom_apps, subPath: custom_apps }
+            - { name: nextcloud-main, mountPath: /var/www/html/themes, subPath: themes }
+            - { name: storage-box, mountPath: /var/www/html/data, subPath: data, readOnly: true }
+            - { name: storage-box, mountPath: /srv/state, subPath: state, readOnly: true }
+    internalDatabase: { enabled: false }
+    externalDatabase:
+      enabled: true
+      type: postgresql
+      host: pg-rw.data.svc.cluster.local
+      database: nextcloud
+      existingSecret:
+        enabled: true
+        secretName: nextcloud
+        usernameKey: db-username
+        passwordKey: db-password
+    externalRedis:
+      enabled: true
+      host: valkey
+      port: "6379"
+      existingSecret:
+        enabled: true
+        secretName: nextcloud
+        passwordKey: redis-password
+    cronjob:
+      enabled: true
+      type: sidecar
+    startupProbe:
+      enabled: true
+      failureThreshold: 60
+    # Lenient: a Postgres switchover or a Valkey restart must not get Nextcloud restarted.
+    livenessProbe:
+      enabled: true
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 6
+    httpRoute:
+      enabled: true
+      parentRefs: [{ name: main, namespace: traefik, sectionName: subdomains }]
+      hostnames: [cloud.bulbashenko.com]

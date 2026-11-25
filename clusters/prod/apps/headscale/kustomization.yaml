@@ -1,0 +1,15 @@
+# Headscale (hs.bulbashenko.com): the mesh VPN's control server. Nothing is kept on a node: the SQLite database lives
+# in an emptyDir, Litestream streams every change to B2 and restores it when the pod starts anywhere else.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: headscale
+resources:
+  - namespace.yaml
+  - headscale.yaml
+  - route.yaml
+  - secret.sops.yaml
+configMapGenerator:
+  - name: headscale
+    files: [config.yaml, litestream.yml]
+components:
+  - ../../../../components/defaults

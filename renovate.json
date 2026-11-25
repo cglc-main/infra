@@ -1,0 +1,58 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>cglc-main/.github//renovate/default"
+  ],
+  "description": "Org policy: cglc-main/.github renovate/default.json. `validate` gates every merge.",
+  "packageRules": [
+    {
+      "description": "Our apps' releases deploy themselves at any version: Flux smoke-tests them and revert-pin undoes a failure.",
+      "matchFileNames": [
+        "clusters/prod/pins.env"
+      ],
+      "automerge": true,
+      "schedule": [
+        "at any time"
+      ],
+      "commitMessageTopic": "{{depName}}",
+      "semanticCommitType": "deploy",
+      "semanticCommitScope": null
+    },
+    {
+      "description": "k3s: patch releases go on their own (system-upgrade-controller, node by node); minors and majors wait for a person.",
+      "matchDepNames": [
+        "k3s-io/k3s"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "major"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "Nextcloud: the chart and the image move together, one major at a time.",
+      "matchPackageNames": [
+        "nextcloud",
+        "docker.io/library/nextcloud"
+      ],
+      "groupName": "Nextcloud"
+    },
+    {
+      "description": "Postgres majors need a dump and restore (or CloudNativePG's major upgrade): a person decides.",
+      "matchPackageNames": [
+        "ghcr.io/cloudnative-pg/postgresql"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "The k3s upgrade image follows the Plan's version, not a tag of its own.",
+      "matchPackageNames": [
+        "rancher/k3s-upgrade"
+      ],
+      "enabled": false
+    }
+  ]
+}

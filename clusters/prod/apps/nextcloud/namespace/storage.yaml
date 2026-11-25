@@ -1,0 +1,36 @@
+# The Storage Box sub-account `nextcloud` over SMB 3: data/ holds the files, state/ the saved config.php. Any node
+# mounts it. Protected by the Storage Box's own snapshots. Never pruned: deleting these objects must never touch the
+# data (Retain, prune disabled).
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nextcloud
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  capacity: { storage: 900Gi }
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  claimRef: { namespace: nextcloud, name: nextcloud }
+  # seal: encrypted in transit. hard: wait out an unreachable box instead of failing writes. noserverino: the driver
+  # requires it against corruption. www-data is 33.
+  mountOptions: [vers=3.1.1, seal, hard, noserverino, noperm, uid=33, gid=33, dir_mode=0770, file_mode=0660]
+  csi:
+    driver: smb.csi.k8s.io
+    volumeHandle: storage-box-nextcloud
+    volumeAttributes:
+      source: "//u689140-sub1.your-storagebox.de/u689140-sub1"
+    nodeStageSecretRef: { name: storage-box, namespace: nextcloud }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: nextcloud
+  resources: { requests: { storage: 900Gi } }

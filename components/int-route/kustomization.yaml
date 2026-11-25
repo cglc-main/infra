@@ -1,0 +1,7 @@
+# Middlewares for an admin UI on <name>.int.bulbashenko.com without a login of its own. A route attaches them as
+# ExtensionRef filters, in this order: mesh-only, forward-auth, headers (README of cglc-main/auth, "Add a service").
+# ExtensionRef is namespace-local, hence a component: include it in the namespace of the route.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - middlewares.yaml

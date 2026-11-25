@@ -1,0 +1,20 @@
+# Stalwart (mail.bulbashenko.com): mail for bulbashenko.com. Nothing stays on a node: settings and mail metadata are
+# in pg, message bodies on the Storage Box. Its settings are the plan in plan.ndjson, applied by the Job `config`
+# after every change (stalwart-cli apply: idempotent upserts). tier-1.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: stalwart
+resources:
+  - namespace.yaml
+  - stalwart.yaml
+  - storage.yaml
+  - routes.yaml
+  - config-job.yaml
+  - secret.sops.yaml
+configMapGenerator:
+  - name: stalwart
+    files: [config.json]
+  - name: stalwart-plan
+    files: [plan.ndjson]
+components:
+  - ../../../../components/defaults

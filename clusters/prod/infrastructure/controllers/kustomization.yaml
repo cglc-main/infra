@@ -1,0 +1,7 @@
+# Cluster-wide controllers, all from their official Helm charts. Every Flux object lives in flux-system (one place for
+# alerts and for `flux get`); the workloads go to their own namespaces (targetNamespace).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespaces
+  - releases

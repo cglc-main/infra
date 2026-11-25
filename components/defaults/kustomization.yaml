@@ -1,0 +1,8 @@
+# Defaults for every namespace that runs workloads: VPA via Goldilocks (components/vpa), and a LimitRange that gives a
+# container without requests a starting point until the VPA has data.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+components:
+  - ../vpa
+resources:
+  - limit-range.yaml

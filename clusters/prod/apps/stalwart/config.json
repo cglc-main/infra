@@ -1,0 +1,9 @@
+{
+  "@type": "PostgreSql",
+  "host": "pg-rw.data.svc.cluster.local",
+  "database": "stalwart",
+  "authUsername": "stalwart",
+  "authSecret": { "@type": "EnvironmentVariable", "variableName": "STALWART_DB_PASSWORD" },
+  "useTls": true,
+  "allowInvalidCerts": true
+}

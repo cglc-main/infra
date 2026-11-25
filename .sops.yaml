@@ -1,0 +1,10 @@
+# Secrets are committed only encrypted, in *.sops.yaml / *.sops.json. The private key is with the owner and in the
+# cluster (Secret flux-system/sops-age). Edit with `sops <file>`. The first matching rule applies.
+creation_rules:
+  # OpenTofu's variables: every value.
+  - path_regex: ^tofu/.*\.sops\.json$
+    age: age1ajv2jeesvhqpn6pudqvjkvnujy32p22ytd78kt3r2yryqk79kazsjrv78h
+  # Kubernetes Secrets: the values, so that kind and name stay readable.
+  - path_regex: \.sops\.yaml$
+    encrypted_regex: ^(data|stringData)$
+    age: age1ajv2jeesvhqpn6pudqvjkvnujy32p22ytd78kt3r2yryqk79kazsjrv78h

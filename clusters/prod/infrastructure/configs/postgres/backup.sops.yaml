@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: b2-pg
+stringData:
+    ACCESS_KEY_ID: ENC[AES256_GCM,data:3QKURvNgguH94cd0GzNINlZvAIpp+WatBw==,iv:m8dOoMVA05+wR+hu8G7wDPNGaV8QOJi8cDGEzUaNWck=,tag:LRdFkg6FvvhJBK2RqUIqEQ==,type:str]
+    ACCESS_SECRET_KEY: ENC[AES256_GCM,data:HEKK5CPvQUb6Qh0bQR+2cyfimymzBdUKhbM/A1b1zw==,iv:3huDSfEb70UbSRHsiD+lEJe8lPcoyBDHdJcWSYRW1jU=,tag:wwxe6aE1tfYVusM8AuOXSw==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBwWklRRTdIck5TZk9NWlE1
+            eXFWT2twNDhmQmdRRENrZm01anVyVnVBUlhzCjBTd3dnQm9wTUdUTFFFTWU5NklP
+            R2RpVks4eXFPOEdRbUQ2YTNFU2VHLzAKLS0tIEp5ZDA0UUJEZm9TLzMxcFRpdTNB
+            SnBsOVJuR0VsZjNuS3BsODlsRGZYVHcKqdWxI7G6EFn2SUP7N2nvA644HBipFC2J
+            P6oiYezGRP9t8AuQCvNMJIlST9yQc9ROWD6JSzI6KA4oWcBotKDYFQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1ajv2jeesvhqpn6pudqvjkvnujy32p22ytd78kt3r2yryqk79kazsjrv78h
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-11-25T22:22:35Z"
+    mac: ENC[AES256_GCM,data:hzEPlLB7eIf7xr7y1KqwTF4WrdLtqnzi1NJz3CEKknTwi+nq9KQW/aqsGMv0oq7TUFmSPZS5P3aLBb+9yuZ5+yiJ2fxAu6SEX/INDWLArLT7Lbm1jInnVH3dAt+RjdgYZdJsbbg7SqnY91IDE16lbBo3/YQcrf3ckkEIXmaIEA8=,iv:gtuhDyXEVu1Ebk1gijEsddEJraXPSiqcv/Wa6lph58o=,tag:3shJARA7HLXvxnu3P1Xtug==,type:str]
+    version: 3.13.3

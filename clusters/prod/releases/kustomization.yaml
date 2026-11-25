@@ -1,0 +1,9 @@
+# Our apps at the versions in ../pins.env (substituted by Flux: postBuild.substituteFrom). Per app: the repo at the
+# release tag, its Kubernetes base with the images of the same release, then its smoke test against production.
+# A failed rollout or smoke test triggers revert-pin (flux-system/notifications.yaml). Docs: delivery.md.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: flux-system
+resources:
+  - auth.yaml
+  - bulbashenko-com.yaml

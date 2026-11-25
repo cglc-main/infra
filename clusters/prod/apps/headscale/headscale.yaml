@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: headscale
+spec:
+  replicas: 1
+  # One writer at a time: the old pod stops before the new one restores from B2.
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: headscale }
+  template:
+    metadata:
+      labels: { app: headscale }
+    spec:
+      priorityClassName: tier-1
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      initContainers:
+        - name: restore
+          image: litestream/litestream:0.5.18
+          args: [restore, -if-db-not-exists, -if-replica-exists, /var/lib/headscale/db.sqlite]
+          envFrom: [{ secretRef: { name: headscale-litestream } }]
+          securityContext: &restricted
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts: &litestream-mounts
+            - { name: data, mountPath: /var/lib/headscale }
+            - { name: config, mountPath: /etc/litestream.yml, subPath: litestream.yml }
+            - { name: tmp, mountPath: /tmp }
+        # A native sidecar: starts before Headscale and stops after it.
+        - name: litestream
+          image: litestream/litestream:0.5.18
+          restartPolicy: Always
+          args: [replicate]
+          envFrom: [{ secretRef: { name: headscale-litestream } }]
+          securityContext: *restricted
+          volumeMounts: *litestream-mounts
+      containers:
+        - name: headscale
+          image: headscale/headscale:0.29.7
+          args: [serve]
+          ports:
+            - { name: http, containerPort: 8080 }
+            - { name: metrics, containerPort: 9090 }
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 20
+            failureThreshold: 6
+          securityContext: *restricted
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/headscale }
+            - { name: config, mountPath: /etc/headscale/config.yaml, subPath: config.yaml }
+            - { name: secret, mountPath: /etc/headscale/secret, readOnly: true }
+            - { name: run, mountPath: /var/run/headscale }
+      volumes:
+        - { name: data, emptyDir: {} }
+        - { name: tmp, emptyDir: {} }
+        - { name: run, emptyDir: {} }
+        - { name: config, configMap: { name: headscale } }
+        - { name: secret, secret: { secretName: headscale, defaultMode: 0440 } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: headscale
+spec:
+  selector: { app: headscale }
+  ports:
+    - { name: http, port: 8080, targetPort: http }
+    - { name: metrics, port: 9090, targetPort: metrics }
