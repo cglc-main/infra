@@ -48,17 +48,6 @@ resource "cloudflare_dns_record" "node" {
   proxied  = false
 }
 
-# Admin UIs: the nodes' tailnet addresses, reachable only through the mesh.
-resource "cloudflare_dns_record" "int" {
-  for_each = toset(local.tailnet_ips)
-  zone_id  = local.zone_id
-  name     = "*.int.${local.domain}"
-  type     = "A"
-  content  = each.value
-  ttl      = 300
-  proxied  = false
-}
-
 resource "cloudflare_dns_record" "mx" {
   zone_id  = local.zone_id
   name     = local.domain
