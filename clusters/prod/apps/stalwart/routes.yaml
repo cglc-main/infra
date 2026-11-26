@@ -76,6 +76,16 @@ spec:
   parentRefs: [{ name: main, namespace: traefik, sectionName: int }]
   hostnames: [mail.int.bulbashenko.com]
   rules:
+    # Stalwart sends / to /account, and the web UI there would sign in with mail.int/account/oauth/callback, which
+    # the SSO client does not list. mail.int is the admin UI; the account page is on the public name.
+    - matches: [{ path: { type: Exact, value: / } }]
+      filters:
+        - type: RequestRedirect
+          requestRedirect: { path: { type: ReplaceFullPath, replaceFullPath: /admin/ }, statusCode: 302 }
+    - matches: [{ path: { type: PathPrefix, value: /account } }]
+      filters:
+        - type: RequestRedirect
+          requestRedirect: { hostname: mail.bulbashenko.com, statusCode: 302 }
     - filters:
         - { type: ExtensionRef, extensionRef: { group: traefik.io, kind: Middleware, name: mesh-only } }
         - { type: ExtensionRef, extensionRef: { group: traefik.io, kind: Middleware, name: headers } }
