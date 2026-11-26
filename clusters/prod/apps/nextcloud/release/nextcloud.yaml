@@ -13,7 +13,7 @@ spec:
   chart:
     spec:
       chart: nextcloud
-      version: 9.4.5
+      version: 9.4.6
       sourceRef: { kind: HelmRepository, name: nextcloud }
   install: { remediation: { retries: 2 } }
   upgrade: { remediation: { retries: 0 } }
@@ -172,7 +172,7 @@ spec:
       # than install a second instance over them.
       extraInitContainers:
         - name: prepare
-          image: docker.io/library/nextcloud:35.0.3-apache
+          image: docker.io/library/nextcloud:35.0.3-apache@sha256:f44180601f18e7664557232b4c5edb0eb4a82d649c05b93313f4e15909553d42
           command:
             - sh
             - -c
