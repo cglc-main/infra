@@ -112,7 +112,9 @@ write_files:
       advertise-address: ${private_ip}
       tls-san: [${private_ip}, ${tailnet_ip}, ${name}.bulbashenko.com]
       flannel-backend: wireguard-native
-      disable: [traefik, servicelb]
+      # gateway-api-crd: since 1.37 k3s ships the Gateway API CRDs as a chart of its own; Flux installs them at the
+      # version pinned in infra (crds/gateway-api.yaml), so k3s must not manage them too.
+      disable: [traefik, servicelb, gateway-api-crd]
       secrets-encryption: true
       # Pods on a lost node move after 30 s instead of 5 minutes.
       kube-apiserver-arg:
