@@ -84,6 +84,22 @@ spec:
       priorityClassName: tier-3
     kube-state-metrics:
       priorityClassName: tier-3
+    # k3s serves the metrics of all its components (apiserver, etcd client, scheduler, kubelet) on every endpoint, so
+    # kubelet's /metrics repeats the apiserver scrape, ~80k series per node. Keep only the kubelet's own metrics there;
+    # the rest comes from the apiserver scrape. Lists replace the chart's, so its three default rules are repeated.
+    kubelet:
+      vmScrapes:
+        kubelet:
+          spec:
+            metricRelabelConfigs:
+              - { action: labeldrop, regex: (uid) }
+              - { action: labeldrop, regex: (id|name) }
+              - action: drop
+                source_labels: [__name__]
+                regex: (rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count)
+              - action: keep
+                source_labels: [__name__]
+                regex: (kubelet|volume_manager|storage_operation|prober|csi|plugin_manager|process|go|rest_client|kubernetes_build)_.*
     # k3s runs these inside its own process: no separate targets to scrape (their rules are off with them).
     kubeControllerManager: { enabled: false }
     kubeScheduler: { enabled: false }
