@@ -18,3 +18,4 @@ configMapGenerator:
     files: [plan.ndjson]
 components:
   - ../../../../components/defaults
+  - ../../../../components/int-route
