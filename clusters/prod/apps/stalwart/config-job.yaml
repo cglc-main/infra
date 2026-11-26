@@ -1,6 +1,7 @@
 # Applies plan.ndjson to Stalwart (stalwart-cli apply: upserts, so applying again changes nothing). The ConfigMap's
 # name carries the plan's hash, so a changed plan changes this Job and Flux runs it again (force). The CLI signs in
-# as the recovery administrator. The plan holds no secrets.
+# as the recovery administrator. The plan holds no secrets. Its last line runs the action UpdateApps: Stalwart renders
+# the web UI's index.html (with oauthClientId) only at startup or on that action, not when an Application changes.
 apiVersion: batch/v1
 kind: Job
 metadata:
