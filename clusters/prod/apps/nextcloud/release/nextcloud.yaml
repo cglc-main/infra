@@ -82,6 +82,16 @@ spec:
             --send-id-token-hint=1 >/dev/null
           occ config:app:set --type=string --value=0 user_oidc allow_multiple_user_backends >/dev/null
 
+          # The local admin (break-glass, /login?direct=1) as in the Secret nextcloud. Its name starts with "_", which no
+          # SSO username can (Kratos identity schema), so user_oidc never maps a person onto it.
+          export OC_PASS="$NEXTCLOUD_ADMIN_PASSWORD"
+          if occ user:info "$NEXTCLOUD_ADMIN_USER" >/dev/null 2>&1; then
+            occ user:resetpassword --password-from-env "$NEXTCLOUD_ADMIN_USER" >/dev/null
+          else
+            occ user:add --password-from-env --display-name "Local admin" --group admin "$NEXTCLOUD_ADMIN_USER" >/dev/null
+          fi
+          unset OC_PASS
+
           # The site's media (docs contracts/site.md): Team folder Site with Gallery/ and Files/. The SSO group site-admins
           # writes; the local user `site` (the app) only reads.
           occ group:info site-admins >/dev/null 2>&1 || occ group:add site-admins >/dev/null

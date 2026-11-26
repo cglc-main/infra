@@ -47,7 +47,8 @@ spec:
     - match: HostSNI(`*`)
       services: [{ name: stalwart, port: 993, serversTransport: proxy-protocol }]
 ---
-# Web: the account page and admin (mail.), JMAP/DAV, and the discovery names that Stalwart answers itself.
+# Web: the account page (mail.), JMAP/DAV, and the discovery names that Stalwart answers itself. The admin UI is not
+# public: /admin redirects to mail.int, which resolves only in the mesh.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -60,4 +61,22 @@ spec:
     - autodiscover.bulbashenko.com
     - mta-sts.bulbashenko.com
   rules:
+    - matches: [{ path: { type: PathPrefix, value: /admin } }]
+      filters:
+        - type: RequestRedirect
+          requestRedirect: { hostname: mail.int.bulbashenko.com, statusCode: 302 }
     - backendRefs: [{ name: stalwart, port: 8080 }]
+---
+# The admin UI (/admin), from the mesh only. Stalwart has its own sign-in (the SSO), so no forward-auth.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: stalwart-admin
+spec:
+  parentRefs: [{ name: main, namespace: traefik, sectionName: int }]
+  hostnames: [mail.int.bulbashenko.com]
+  rules:
+    - filters:
+        - { type: ExtensionRef, extensionRef: { group: traefik.io, kind: Middleware, name: mesh-only } }
+        - { type: ExtensionRef, extensionRef: { group: traefik.io, kind: Middleware, name: headers } }
+      backendRefs: [{ name: stalwart, port: 8080 }]

@@ -4,7 +4,7 @@ kind: Secret
 metadata:
     name: grafana-admin
 stringData:
-    admin-user: ENC[AES256_GCM,data:7HO+XSs=,iv:l4maPt66dPr5Ydw2lYkPtFGXMKLWy75992apj7D71XA=,tag:vZS3sUmjzZRM3HYbXjQGLg==,type:str]
+    admin-user: ENC[AES256_GCM,data:ccm8izs2,iv:NbQ7Pvyd76DswYDRYofodqj6el6insrpyibEeHlf3WY=,tag:OPkqJmroLS2UaNNIWsDojA==,type:str]
     admin-password: ENC[AES256_GCM,data:NUwDIpb6T/vRWQzC2oLlA/5ouOqxL8uFrwTsywa6WAa1+aN9g067XupeJWplTtNN,iv:WYpbaIhfNSfAZEImpk6rULezGq6kqDmrkSViwthrm/8=,tag:ca1VZ8FA1fGGppfaJ4r03Q==,type:str]
 sops:
     age:
@@ -18,8 +18,8 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age1ajv2jeesvhqpn6pudqvjkvnujy32p22ytd78kt3r2yryqk79kazsjrv78h
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-11-25T21:27:03Z"
-    mac: ENC[AES256_GCM,data:6txY0lTt45jzSw81+CysGyZNt0DM1nkAOLKFYDW26le94kIFhnSgp3b7+zDu91DUHFTTkPwPXDxfquCp666UQahw5I55EiPT2dyNnCXHccUu2UUg+43ATA91NQVK1QYRmEBNyu5W3b9k7IVUQ13VbC/Q4uCcKMBTT0YQF5rqYfs=,iv:138OsCiScVXhGM9s8z/ZsCu40FiFjIF4qNb8sjm77wI=,tag:RsELi4lC5l1c3FpYqKgujA==,type:str]
+    lastmodified: "2026-11-26T02:06:37Z"
+    mac: ENC[AES256_GCM,data:hlDcFf8dlu2+V/QSDnr8RWZ1734ZhrUERRb4AYmqZy4N2mWqQoV4h9xrC7BpHbAZv6iuPQST8lkCgVizy6xP7rDd/smk9Jd5amH0eNJp8W66vWJv7GoLwOdcO4yTxUGTskKlZIti8yYICH7yBANscGjivL5tB6p27zdCM8fyfp0=,iv:5HjW5DIM8e3/jUQTxhf9jQRCLoIMj4gpEv9yrpXEvOM=,tag:2rcddyihI+0FGkJjXi/06g==,type:str]
     version: 3.13.3
 ---
 apiVersion: v1
@@ -40,6 +40,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age1ajv2jeesvhqpn6pudqvjkvnujy32p22ytd78kt3r2yryqk79kazsjrv78h
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-11-25T21:27:03Z"
-    mac: ENC[AES256_GCM,data:6txY0lTt45jzSw81+CysGyZNt0DM1nkAOLKFYDW26le94kIFhnSgp3b7+zDu91DUHFTTkPwPXDxfquCp666UQahw5I55EiPT2dyNnCXHccUu2UUg+43ATA91NQVK1QYRmEBNyu5W3b9k7IVUQ13VbC/Q4uCcKMBTT0YQF5rqYfs=,iv:138OsCiScVXhGM9s8z/ZsCu40FiFjIF4qNb8sjm77wI=,tag:RsELi4lC5l1c3FpYqKgujA==,type:str]
+    lastmodified: "2026-11-26T02:06:37Z"
+    mac: ENC[AES256_GCM,data:hlDcFf8dlu2+V/QSDnr8RWZ1734ZhrUERRb4AYmqZy4N2mWqQoV4h9xrC7BpHbAZv6iuPQST8lkCgVizy6xP7rDd/smk9Jd5amH0eNJp8W66vWJv7GoLwOdcO4yTxUGTskKlZIti8yYICH7yBANscGjivL5tB6p27zdCM8fyfp0=,iv:5HjW5DIM8e3/jUQTxhf9jQRCLoIMj4gpEv9yrpXEvOM=,tag:2rcddyihI+0FGkJjXi/06g==,type:str]
     version: 3.13.3

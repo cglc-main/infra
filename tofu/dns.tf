@@ -28,13 +28,16 @@ resource "cloudflare_dns_record" "wildcard" {
   proxied = false
 }
 
-resource "cloudflare_dns_record" "mail" {
-  zone_id = local.zone_id
-  name    = "mail.${local.domain}"
-  type    = "A"
-  content = local.fip
-  ttl     = 300
-  proxied = false
+# The admin UIs on *.int resolve to the nodes' tailnet addresses: reachable only from the mesh, and a new UI needs no
+# DNS change. Traefik still lets only tailnet sources through (component int-route, middleware mesh-only).
+resource "cloudflare_dns_record" "int" {
+  for_each = toset(local.tailnet_ips)
+  zone_id  = local.zone_id
+  name     = "*.int.${local.domain}"
+  type     = "A"
+  content  = each.value
+  ttl      = 300
+  proxied  = false
 }
 
 # Each node by name: the target of its reverse DNS (nodes.tf).
