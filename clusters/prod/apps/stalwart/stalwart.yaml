@@ -24,7 +24,7 @@ spec:
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: stalwart
-          image: docker.io/stalwartlabs/stalwart:v1.2.0
+          image: docker.io/stalwartlabs/stalwart:v1.2.1@sha256:ed3153af935f0125ed0424b2a6d7d5891915a9249189dda76860a27f906b64ea
           args: [--config, /etc/stalwart/config.json]
           envFrom: [{ secretRef: { name: stalwart } }]
           ports:
