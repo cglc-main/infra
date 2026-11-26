@@ -52,6 +52,10 @@ spec:
       websecure:
         port: 443
         http3: { enabled: false }
+        # Traefik's default (60s) is for the whole request body; the Nextcloud client sizes upload chunks to take about
+        # 60s, so slow uplinks hit it. Still finite: a slow-client (Slowloris) limit.
+        transport:
+          respondingTimeouts: { readTimeout: 10m }
       smtp: { port: 25, protocol: TCP, expose: { default: false } }
       submissions: { port: 465, protocol: TCP, expose: { default: false } }
       submission: { port: 587, protocol: TCP, expose: { default: false } }
