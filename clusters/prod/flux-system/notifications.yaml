@@ -38,7 +38,7 @@ spec:
   address: https://github.com/cglc-main/infra
   secretRef: { name: github-app }
 ---
-apiVersion: notification.toolkit.fluxcd.io/v1beta3
+apiVersion: notification.toolkit.fluxcd.io/v1
 kind: Alert
 metadata:
   name: failures
@@ -53,7 +53,7 @@ spec:
     - { kind: HelmRelease, name: "*" }
     - { kind: FluxInstance, name: "*" }
 ---
-apiVersion: notification.toolkit.fluxcd.io/v1beta3
+apiVersion: notification.toolkit.fluxcd.io/v1
 kind: Alert
 metadata:
   name: deploys
@@ -65,7 +65,7 @@ spec:
     - { kind: Kustomization, name: bulbashenko-com-smoke }
   inclusionList: [".*Reconciliation finished.*"]
 ---
-apiVersion: notification.toolkit.fluxcd.io/v1beta3
+apiVersion: notification.toolkit.fluxcd.io/v1
 kind: Alert
 metadata:
   name: status-auth
@@ -74,7 +74,7 @@ spec:
   eventSeverity: info
   eventSources: [{ kind: Kustomization, name: auth-smoke }]
 ---
-apiVersion: notification.toolkit.fluxcd.io/v1beta3
+apiVersion: notification.toolkit.fluxcd.io/v1
 kind: Alert
 metadata:
   name: status-bulbashenko-com
@@ -85,7 +85,7 @@ spec:
 ---
 # A failed rollout (health check timeout) or smoke test of an app: revert-pin decides whether the failing version
 # is the pinned one and reverts it (cglc-main/infra .github/workflows/revert-pin.yml).
-apiVersion: notification.toolkit.fluxcd.io/v1beta3
+apiVersion: notification.toolkit.fluxcd.io/v1
 kind: Alert
 metadata:
   name: revert-on-failure
