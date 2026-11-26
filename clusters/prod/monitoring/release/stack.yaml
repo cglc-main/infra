@@ -45,7 +45,12 @@ spec:
         priorityClassName: tier-3
         k8sCollector: { enabled: true }
     vmagent:
-      spec: { priorityClassName: tier-3 }
+      spec:
+        priorityClassName: tier-3
+        # No CPU limit: vmagent parses every scraped sample, including the ones relabelling drops, and the operator's
+        # default 200m limit throttled it (CPUThrottlingHigh). With a CPU request set, the operator adds no CPU limit;
+        # 50m is its own default request, and memory keeps its defaults. VPA adjusts the requests.
+        resources: { requests: { cpu: 50m } }
     vmalert:
       spec: { priorityClassName: tier-3 }
     alertmanager:
