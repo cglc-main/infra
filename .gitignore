@@ -1,2 +1,3 @@
 .terraform/
 *.tfplan
+scripts/rebuild-cluster.sh
