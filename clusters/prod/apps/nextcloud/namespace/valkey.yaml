@@ -19,7 +19,7 @@ spec:
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: valkey
-          image: docker.io/valkey/valkey:9.0.7-alpine
+          image: docker.io/valkey/valkey:9.0.7-alpine@sha256:2d04268dfa26ab31cfa3fdc538866e76438b2d00e41db41b8cb86d780ac5a416
           args: ["--requirepass", "$(VALKEY_PASSWORD)", "--save", "", "--appendonly", "no", "--maxmemory-policy", "allkeys-lru"]
           env:
             - name: VALKEY_PASSWORD

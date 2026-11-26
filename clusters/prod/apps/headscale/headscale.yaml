@@ -21,7 +21,7 @@ spec:
         seccompProfile: { type: RuntimeDefault }
       initContainers:
         - name: restore
-          image: litestream/litestream:0.5.18
+          image: litestream/litestream:0.5.18@sha256:513bff62a88fc0c86c73d27333c41c54c89fe890a7c32a551600adff9309b11b
           args: [restore, -if-db-not-exists, -if-replica-exists, /var/lib/headscale/db.sqlite]
           envFrom: [{ secretRef: { name: headscale-litestream } }]
           securityContext: &restricted
@@ -34,7 +34,7 @@ spec:
             - { name: tmp, mountPath: /tmp }
         # A native sidecar: starts before Headscale and stops after it.
         - name: litestream
-          image: litestream/litestream:0.5.18
+          image: litestream/litestream:0.5.18@sha256:513bff62a88fc0c86c73d27333c41c54c89fe890a7c32a551600adff9309b11b
           restartPolicy: Always
           args: [replicate]
           envFrom: [{ secretRef: { name: headscale-litestream } }]
@@ -42,7 +42,7 @@ spec:
           volumeMounts: *litestream-mounts
       containers:
         - name: headscale
-          image: headscale/headscale:0.29.7
+          image: headscale/headscale:0.29.7@sha256:11f81665e842809db9fe3006a38c56a66e968baa5abd4bac498e86445572b970
           args: [serve]
           ports:
             - { name: http, containerPort: 8080 }
