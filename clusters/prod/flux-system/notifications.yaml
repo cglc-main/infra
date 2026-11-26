@@ -2,7 +2,7 @@
 #   telegram        failures of anything, and every deploy of our apps
 #   github-<app>    commit status on the app's released commit, once its smoke test has run
 #   infra-dispatch  a failed deploy of an app triggers revert-pin in cglc-main/infra (docs: delivery.md)
-apiVersion: notification.toolkit.fluxcd.io/v1beta3
+apiVersion: notification.toolkit.fluxcd.io/v1
 kind: Provider
 metadata:
   name: telegram
@@ -11,7 +11,7 @@ spec:
   channel: "-4765757619" # chat id, not a secret
   secretRef: { name: telegram }
 ---
-apiVersion: notification.toolkit.fluxcd.io/v1beta3
+apiVersion: notification.toolkit.fluxcd.io/v1
 kind: Provider
 metadata:
   name: github-auth
@@ -20,7 +20,7 @@ spec:
   address: https://github.com/cglc-main/auth
   secretRef: { name: github-app }
 ---
-apiVersion: notification.toolkit.fluxcd.io/v1beta3
+apiVersion: notification.toolkit.fluxcd.io/v1
 kind: Provider
 metadata:
   name: github-bulbashenko-com
@@ -29,7 +29,7 @@ spec:
   address: https://github.com/cglc-main/bulbashenko.com
   secretRef: { name: github-app }
 ---
-apiVersion: notification.toolkit.fluxcd.io/v1beta3
+apiVersion: notification.toolkit.fluxcd.io/v1
 kind: Provider
 metadata:
   name: infra-dispatch
