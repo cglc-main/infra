@@ -21,7 +21,7 @@ spec:
         seccompProfile: { type: RuntimeDefault }
       initContainers:
         - name: wait
-          image: docker.io/library/alpine:3.22
+          image: docker.io/library/alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf
           command: [sh, -c, "until wget -q -O /dev/null http://stalwart:8080/healthz/ready; do sleep 5; done"]
           securityContext: &restricted
             allowPrivilegeEscalation: false
