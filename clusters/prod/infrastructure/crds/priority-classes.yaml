@@ -1,7 +1,9 @@
 # Who keeps running when memory runs short (a node lost): tier-3 is evicted and preempted first, tier-1 last.
 #   tier-1  what visitors and mail depend on: auth, the site, Postgres, Stalwart, Headscale (set explicitly)
-#   tier-2  everything without a class: Nextcloud and the platform's controllers (the default)
-#   tier-3  monitoring and logs (set explicitly); its per-node agents use system-node-critical, they cannot move
+#   tier-2  everything without a class: Nextcloud and the platform's controllers (the default); also vmsingle and
+#           vlsingle, which their local-path volumes pin to one node
+#   tier-3  the rest of monitoring and logs (set explicitly); its per-node agents use system-node-critical, they
+#           cannot move
 # Kubernetes' own system-cluster-critical / system-node-critical stay above all three.
 apiVersion: scheduling.k8s.io/v1
 kind: PriorityClass

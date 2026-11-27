@@ -27,7 +27,9 @@ spec:
     vmsingle:
       spec:
         retentionPeriod: 14d
-        priorityClassName: tier-3
+        # tier-2, not tier-3: its local-path volume pins it to one node, so it cannot move when that node is full. It
+        # preempts the rest of monitoring (tier-3), which can move. vlsingle the same.
+        priorityClassName: tier-2
         # VPA off for vmsingle (Goldilocks' per-workload annotation): VictoriaMetrics sizes its caches from its memory
         # limit (60 % of 1500Mi), so VPA only followed the limit up to ~950M, which did not fit the node its volume is
         # on. Its request is the operator's default (500Mi); Goldilocks still shows the recommendation.
@@ -41,7 +43,7 @@ spec:
       enabled: true
       spec:
         retentionPeriod: 14d
-        priorityClassName: tier-3
+        priorityClassName: tier-2
         storage:
           storageClassName: local-path
           resources: { requests: { storage: 10Gi } }
