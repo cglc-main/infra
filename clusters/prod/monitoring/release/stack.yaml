@@ -42,7 +42,10 @@ spec:
     vlagent:
       enabled: true
       spec:
-        priorityClassName: tier-3
+        # Per-node agents (here and node-exporter) cannot move to another node: as tier-3 they were preempted and
+        # stayed Pending, leaving that node without logs and metrics. They are tiny; Kubernetes' class for pods that
+        # must run on every node keeps them there.
+        priorityClassName: system-node-critical
         k8sCollector: { enabled: true }
     vmagent:
       spec:
@@ -86,7 +89,7 @@ spec:
           role_attribute_strict: true
           allow_assign_grafana_admin: true
     prometheus-node-exporter:
-      priorityClassName: tier-3
+      priorityClassName: system-node-critical
     kube-state-metrics:
       priorityClassName: tier-3
     # k3s serves the metrics of all its components (apiserver, etcd client, scheduler, kubelet) on every endpoint, so
