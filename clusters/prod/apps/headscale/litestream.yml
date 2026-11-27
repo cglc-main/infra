@@ -1,4 +1,11 @@
 # Continuous replication of Headscale's database to B2 (credentials: Secret headscale-litestream).
+# Defaults (L0 check every 15s, L1 compaction every 30s) issue ~9k LIST calls/day and blow
+# B2's daily Class C transaction cap, after which restore fails until 00:00 UTC.
+l0-retention-check-interval: 5m
+levels:
+  - interval: 5m
+  - interval: 1h
+  - interval: 24h
 dbs:
   - path: /var/lib/headscale/db.sqlite
     replica:
