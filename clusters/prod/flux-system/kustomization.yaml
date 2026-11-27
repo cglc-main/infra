@@ -7,3 +7,4 @@ resources:
   - flux-web.sops.yaml
   - notifications.yaml
   - notifications.sops.yaml
+  - renovate.yaml
