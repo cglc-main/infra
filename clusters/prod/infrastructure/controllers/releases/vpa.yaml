@@ -1,5 +1,5 @@
-# Vertical Pod Autoscaler: sets memory and CPU requests from what pods actually use (in place, without restarts where
-# possible). Goldilocks creates its objects (goldilocks.yaml); limits written by the apps are left alone.
+# Vertical Pod Autoscaler: sets memory and CPU requests from what pods actually use, when a pod is created (mode
+# Initial, components/vpa). Goldilocks creates its objects (goldilocks.yaml); limits written by the apps are left alone.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -16,6 +16,9 @@ spec:
   install: { remediation: { retries: 3 } }
   upgrade: { remediation: { retries: 3 } }
   values:
+    # The updater changes running pods (in place or by eviction); in mode Initial it has nothing to do. A VPA in
+    # another mode needs it back.
+    updater: { enabled: false }
     recommender:
       # VPA never recommends less than 250 MB per pod by default: on 4 GB nodes that alone exceeds what the nodes can
       # allocate (Traefik, using ~55 MiB, got 250 MiB). A low floor lets measured usage set the requests.

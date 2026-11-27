@@ -1,5 +1,10 @@
 # Namespace labels for Goldilocks: it creates a VPA for every workload in the namespace, which sets requests from real
-# usage, in place where possible, and never touches limits.
+# usage and never touches limits.
+#
+# Mode Initial: requests are set when a pod is created (a deploy, a drain, kured's reboot), never on a running pod.
+# In-place resize cannot work here: kubelet refuses it for containers with swap (Infeasible), and the fallback,
+# eviction, is refused for single-replica workloads (updater's minReplicas). The pod then kept a raised request in its
+# spec that it was never given, and the scheduler counted it: nodes looked over 100 % booked.
 apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
 patches:
@@ -12,5 +17,5 @@ patches:
         labels:
           goldilocks.fairwinds.com/enabled: "true"
         annotations:
-          goldilocks.fairwinds.com/vpa-update-mode: InPlaceOrRecreate
+          goldilocks.fairwinds.com/vpa-update-mode: Initial
           goldilocks.fairwinds.com/vpa-resource-policy: '{"containerPolicies":[{"containerName":"*","controlledValues":"RequestsOnly"}]}'
