@@ -103,6 +103,22 @@ spec:
     # the rest comes from the apiserver scrape. Lists replace the chart's, so its three default rules are repeated.
     kubelet:
       vmScrapes:
+        # cAdvisor also measures k3s's own cgroup (k3s.service: k3s and containerd), what kubeReserved is sized by. The
+        # chart drops the label id, which merges every non-pod cgroup into one series; keep k3s.service apart as
+        # systemd_service="k3s" first. Lists replace the chart's, so its default rules are repeated.
+        cadvisor:
+          spec:
+            metricRelabelConfigs:
+              - { action: labeldrop, regex: (uid) }
+              - action: replace
+                source_labels: [id]
+                regex: /system\.slice/k3s\.service
+                target_label: systemd_service
+                replacement: k3s
+              - { action: labeldrop, regex: (id|name) }
+              - action: drop
+                source_labels: [__name__]
+                regex: (rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count)
         kubelet:
           spec:
             metricRelabelConfigs:
@@ -114,6 +130,22 @@ spec:
               - action: keep
                 source_labels: [__name__]
                 regex: (kubelet|volume_manager|storage_operation|prober|csi|plugin_manager|process|go|rest_client|kubernetes_build)_.*
+    # The other half: the apiserver's /metrics also carries the kubelet's own metrics (~4.5k series), with the namespace
+    # label overwritten. The kubelet scrape above keeps them; drop them here. The list replaces the chart's endpoint.
+    kubeApiServer:
+      vmScrape:
+        spec:
+          endpoints:
+            - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+              port: https
+              scheme: https
+              tlsConfig:
+                caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+                serverName: kubernetes
+              metricRelabelConfigs:
+                - action: drop
+                  source_labels: [__name__]
+                  regex: (kubelet|volume_manager|storage_operation|prober|csi|plugin_manager)_.*
     # k3s runs these inside its own process: no separate targets to scrape (their rules are off with them).
     kubeControllerManager: { enabled: false }
     kubeScheduler: { enabled: false }
