@@ -1,5 +1,5 @@
-# Vertical Pod Autoscaler: sets memory and CPU requests from what pods actually use, when a pod is created (mode
-# Initial, components/vpa). Goldilocks creates its objects (goldilocks.yaml); limits written by the apps are left alone.
+# Vertical Pod Autoscaler: keeps memory and CPU requests at what pods actually use (mode Recreate, components/vpa).
+# Goldilocks creates its objects (goldilocks.yaml); limits written by the apps are left alone.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -16,9 +16,19 @@ spec:
   install: { remediation: { retries: 3 } }
   upgrade: { remediation: { retries: 3 } }
   values:
-    # The updater changes running pods (in place or by eviction); in mode Initial it has nothing to do. A VPA in
-    # another mode needs it back.
-    updater: { enabled: false }
+    # The updater recreates a running pod whose request has drifted from the recommendation: at once when it is outside
+    # the recommended range, otherwise after 12 h when it is 10 % off. The admission controller gives the new pod the
+    # current recommendation. Without it a request was set only when a pod was created and then went stale: the
+    # scheduler counted stale requests (~1.5 GiB more than pods used) and a pod pinned to its node stayed Pending.
+    #
+    # Not in place: kubelet refuses in-place resize for containers with swap (zram). --min-replicas=1: the default 2
+    # never evicts single-replica workloads, most of ours. A single-replica pod restarts for that, about a minute.
+    # One replica without a PodDisruptionBudget: with minAvailable 1 the budget would block every drain (kured).
+    updater:
+      replicas: 1
+      podDisruptionBudget: { enabled: false }
+      extraArgs:
+        - --min-replicas=1
     recommender:
       # VPA never recommends less than 250 MB per pod by default: on 4 GB nodes that alone exceeds what the nodes can
       # allocate (Traefik, using ~55 MiB, got 250 MiB). A low floor lets measured usage set the requests.
