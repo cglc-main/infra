@@ -1,49 +1,49 @@
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata: { name: traefik }
-spec: { interval: 24h, url: https://traefik.github.io/charts }
+spec: { interval: 1h, url: https://traefik.github.io/charts }
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata: { name: jetstack }
-spec: { interval: 24h, url: https://charts.jetstack.io }
+spec: { interval: 1h, url: https://charts.jetstack.io }
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata: { name: cnpg }
-spec: { interval: 24h, url: https://cloudnative-pg.github.io/charts }
+spec: { interval: 1h, url: https://cloudnative-pg.github.io/charts }
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata: { name: csi-driver-smb }
-spec: { interval: 24h, url: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts }
+spec: { interval: 1h, url: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts }
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata: { name: kubereboot }
-spec: { interval: 24h, url: https://kubereboot.github.io/charts }
+spec: { interval: 1h, url: https://kubereboot.github.io/charts }
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata: { name: autoscaler }
-spec: { interval: 24h, url: https://kubernetes.github.io/autoscaler }
+spec: { interval: 1h, url: https://kubernetes.github.io/autoscaler }
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata: { name: fairwinds }
-spec: { interval: 24h, url: https://charts.fairwinds.com/stable }
+spec: { interval: 1h, url: https://charts.fairwinds.com/stable }
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata: { name: descheduler }
-spec: { interval: 24h, url: https://kubernetes-sigs.github.io/descheduler }
+spec: { interval: 1h, url: https://kubernetes-sigs.github.io/descheduler }
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata: { name: victoriametrics }
-spec: { interval: 24h, url: https://victoriametrics.github.io/helm-charts }
+spec: { interval: 1h, url: https://victoriametrics.github.io/helm-charts }
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata: { name: nextcloud }
-spec: { interval: 24h, url: https://nextcloud.github.io/helm }
+spec: { interval: 1h, url: https://nextcloud.github.io/helm }
