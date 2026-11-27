@@ -1,0 +1,67 @@
+# Starts Renovate (cglc-main/.github renovate.yml) every 30 minutes. GitHub drops most scheduled runs of that workflow,
+# so the cluster dispatches it instead; Renovate itself still runs on GitHub's runners. The GitHub App token comes
+# from the App's key in notifications.sops.yaml (the image Renovate's docs name for it).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: renovate-dispatch
+spec:
+  schedule: "17,47 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 300
+      ttlSecondsAfterFinished: 3600
+      template:
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            seccompProfile: { type: RuntimeDefault }
+          initContainers:
+            - name: token
+              image: ghcr.io/mshekow/github-app-installation-token:latest@sha256:80e94e6d6894ea1c60486affeec7279ce5179569d46d4cdb926d34754ed7b6ad
+              command: ["/bin/sh", "-c", 'node /app/index.js "$APP_ID" "$INSTALLATION_ID" /key/private-key > /token/token']
+              env:
+                - name: APP_ID
+                  valueFrom: { secretKeyRef: { name: github-app, key: githubAppID } }
+                - name: INSTALLATION_ID
+                  valueFrom: { secretKeyRef: { name: github-app, key: githubAppInstallationID } }
+              volumeMounts:
+                - { name: key, mountPath: /key, readOnly: true }
+                - { name: token, mountPath: /token }
+              securityContext: &restricted
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: { drop: [ALL] }
+              resources: &resources
+                requests: { cpu: 10m, memory: 64Mi }
+                limits: { memory: 128Mi }
+          containers:
+            - name: dispatch
+              image: curlimages/curl:8.23.0@sha256:3fb7e13e5d179a845c97d78204f3f1064d1907037f26a3ebf91710571151fd93
+              command:
+                - /bin/sh
+                - -c
+                - >-
+                  curl -fsS -X POST -H "Authorization: Bearer $(cat /token/token)"
+                  -H "Accept: application/vnd.github+json" -d '{"ref":"main"}'
+                  https://api.github.com/repos/cglc-main/.github/actions/workflows/renovate.yml/dispatches
+              volumeMounts:
+                - { name: token, mountPath: /token, readOnly: true }
+              securityContext: *restricted
+              resources: *resources
+          volumes:
+            - name: key
+              secret:
+                secretName: github-app
+                items: [{ key: githubAppPrivateKey, path: private-key }]
+            - name: token
+              emptyDir: { medium: Memory, sizeLimit: 1Mi }
