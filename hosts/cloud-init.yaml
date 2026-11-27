@@ -133,15 +133,19 @@ write_files:
       etcd-s3-access-key: "${etcd_s3_key}"
       etcd-s3-secret-key: "${etcd_s3_secret}"
 
-  # The node protects itself: memory for the system and k3s is reserved (GKE's formula: 25 % of the first 4 GiB),
-  # and kubelet evicts pods before the kernel's OOM killer would reach k3s or etcd. Swap: zram, for Burstable pods.
+  # The node protects itself: memory for the system and k3s is reserved, and kubelet evicts pods before the kernel's
+  # OOM killer would reach k3s or etcd. Swap: zram, for Burstable pods. The reserve is measured, not a formula: every
+  # node is a k3s server with etcd (GKE's formula assumes the control plane lives elsewhere). k3s used 1.43-1.55 GB
+  # anon + 0.08-0.16 GB kernel (cgroup k3s.service, 2026-11-27), other system services ~0.1 GB; k3s's own resource
+  # profiling gives 1606 MB for a server with embedded etcd. Check it again after a k3s minor upgrade (docs:
+  # architecture.md, "Memory").
   - path: /etc/rancher/k3s/kubelet.yaml
     content: |
       apiVersion: kubelet.config.k8s.io/v1beta1
       kind: KubeletConfiguration
       kubeReserved:
         cpu: 100m
-        memory: 1Gi
+        memory: 1750Mi
       evictionHard:
         memory.available: 100Mi
         nodefs.available: 10%
