@@ -16,10 +16,10 @@ spec:
   install: { remediation: { retries: 3 } }
   upgrade: { remediation: { retries: 3 } }
   values:
-    # A CronJob (the chart's default): a pod exists only for the few seconds of a run, instead of a Deployment holding
-    # its 256 MiB request (it used 30-80 MiB) all the time on nodes that have ~2 GB each for pods.
-    kind: CronJob
-    schedule: "*/10 * * * *"
+    # A Deployment, not the chart's default CronJob: a CronJob pod is system-cluster-critical and needs 256 MiB at every
+    # run, and on full nodes it preempted vmsingle every 10 minutes. A Deployment keeps its room once.
+    kind: Deployment
+    deschedulingInterval: 10m
     deschedulerPolicy:
       profiles:
         - name: spread
