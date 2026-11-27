@@ -28,6 +28,12 @@ spec:
       spec:
         retentionPeriod: 14d
         priorityClassName: tier-3
+        # VPA off for vmsingle (Goldilocks' per-workload annotation): VictoriaMetrics sizes its caches from its memory
+        # limit (60 % of 1500Mi), so VPA only followed the limit up to ~950M, which did not fit the node its volume is
+        # on. Its request is the operator's default (500Mi); Goldilocks still shows the recommendation.
+        managedMetadata:
+          annotations:
+            goldilocks.fairwinds.com/vpa-update-mode: "off"
         storage:
           storageClassName: local-path
           resources: { requests: { storage: 10Gi } }
