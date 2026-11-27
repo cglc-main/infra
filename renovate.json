@@ -6,6 +6,13 @@
   "description": "Org policy: cglc-main/.github renovate/default.json. `validate` gates every merge.",
   "packageRules": [
     {
+      "description": "Flux reads a chart repository's index every hour (repositories.yaml): a chart younger than that may be missing from it, and the HelmRelease stalls until the next read. Two hours clears the interval and its jitter.",
+      "matchDatasources": [
+        "helm"
+      ],
+      "minimumReleaseAge": "2 hours"
+    },
+    {
       "description": "Our apps' releases deploy themselves at any version: Flux smoke-tests them and revert-pin undoes a failure.",
       "matchFileNames": [
         "clusters/prod/pins.env"
