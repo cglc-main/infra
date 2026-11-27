@@ -1,0 +1,2431 @@
+{
+ "uid": "cglc-resources",
+ "title": "Resources",
+ "description": "Memory, CPU and disk: physical use and the scheduler's view.",
+ "tags": [
+  "cglc"
+ ],
+ "timezone": "browser",
+ "editable": false,
+ "graphTooltip": 1,
+ "refresh": "1m",
+ "schemaVersion": 41,
+ "version": 1,
+ "time": {
+  "from": "now-24h",
+  "to": "now"
+ },
+ "templating": {
+  "list": []
+ },
+ "annotations": {
+  "list": []
+ },
+ "links": [
+  {
+   "type": "dashboards",
+   "tags": [
+    "cglc"
+   ],
+   "asDropdown": false,
+   "title": "cglc",
+   "includeVars": false,
+   "keepTime": true
+  }
+ ],
+ "panels": [
+  {
+   "type": "text",
+   "id": 1,
+   "title": "",
+   "gridPos": {
+    "h": 3,
+    "w": 24,
+    "x": 0,
+    "y": 0
+   },
+   "options": {
+    "mode": "markdown",
+    "content": "**Two views of the same memory.** *Physical*: what the kernel sees, out of the node's real RAM. *Scheduler*: what is promised: k3s's reserve (kubeReserved + the eviction threshold, `capacity − allocatable`) plus the pods' requests, which VPA sets. The scheduler does not place a pod that does not fit.\n\nOther dashboards show over 100 % because they divide the whole node's usage (k3s included) by *allocatable*, the part left for pods after k3s's reserve. Here everything is out of the physical RAM."
+   }
+  },
+  {
+   "type": "row",
+   "id": 2,
+   "title": "Memory: cluster",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 3
+   },
+   "panels": []
+  },
+  {
+   "type": "stat",
+   "id": 3,
+   "title": "Physical RAM",
+   "description": "RAM the three nodes' kernels see (a CX23's 4 GB minus what the kernel keeps for itself).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 0,
+    "y": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum(sum by (node) (label_replace(node_memory_MemTotal_bytes, \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info)))",
+     "instant": true,
+     "range": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "text",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "none",
+    "graphMode": "none",
+    "textMode": "value",
+    "justifyMode": "center",
+    "orientation": "auto",
+    "wideLayout": true,
+    "showPercentChange": false
+   }
+  },
+  {
+   "type": "stat",
+   "id": 4,
+   "title": "Used now",
+   "description": "Physical RAM in use (MemTotal − MemAvailable): pods, k3s, the system, unreclaimable caches.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 4,
+    "y": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum((sum by (node) (label_replace(node_memory_MemTotal_bytes, \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info)) - sum by (node) (label_replace(node_memory_MemAvailable_bytes, \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info)))) / sum(sum by (node) (label_replace(node_memory_MemTotal_bytes, \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info)))",
+     "instant": true,
+     "range": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "value": 0.85,
+        "color": "orange"
+       },
+       {
+        "value": 0.95,
+        "color": "red"
+       }
+      ]
+     },
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "value",
+    "justifyMode": "center",
+    "orientation": "auto",
+    "wideLayout": true,
+    "showPercentChange": false
+   }
+  },
+  {
+   "type": "stat",
+   "id": 5,
+   "title": "k3s uses",
+   "description": "Working set of the cgroup k3s.service on all three nodes: k3s (apiserver, etcd, controllers, kubelet) and containerd. kubeReserved is sized by the same number.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 8,
+    "y": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum(max by (node) (container_memory_working_set_bytes{job=\"kubelet\",systemd_service=\"k3s\"}))",
+     "instant": true,
+     "range": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "text",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "none",
+    "graphMode": "none",
+    "textMode": "value",
+    "justifyMode": "center",
+    "orientation": "auto",
+    "wideLayout": true,
+    "showPercentChange": false
+   }
+  },
+  {
+   "type": "stat",
+   "id": 6,
+   "title": "Reserved for k3s",
+   "description": "capacity − allocatable on all nodes: kubeReserved (1750Mi each, hosts/cloud-init.yaml) plus the eviction threshold (100Mi each).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 12,
+    "y": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum((sum by (node) (kube_node_status_capacity{resource=\"memory\"}) - sum by (node) (kube_node_status_allocatable{resource=\"memory\"})))",
+     "instant": true,
+     "range": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "text",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "none",
+    "graphMode": "none",
+    "textMode": "value",
+    "justifyMode": "center",
+    "orientation": "auto",
+    "wideLayout": true,
+    "showPercentChange": false
+   }
+  },
+  {
+   "type": "stat",
+   "id": 7,
+   "title": "Pods requested (VPA)",
+   "description": "Pods' memory requests (set by VPA) out of allocatable. Over 100 % only while a pod carries a resize kubelet refused (left from VPA's former in-place mode; gone when the pod is recreated).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 16,
+    "y": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum(sum by (node) (((kube_pod_container_resource_requests{resource=\"memory\",node!=\"\"} * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1)) or (kube_pod_init_container_resource_requests{resource=\"memory\",node!=\"\"} * on (namespace, pod, container) group_left () max by (namespace, pod, container) (kube_pod_init_container_info{restart_policy=\"Always\"}) * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1))))) / sum(sum by (node) (kube_node_status_allocatable{resource=\"memory\"}))",
+     "instant": true,
+     "range": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "value": 0.9,
+        "color": "orange"
+       },
+       {
+        "value": 0.97,
+        "color": "red"
+       }
+      ]
+     },
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "value",
+    "justifyMode": "center",
+    "orientation": "auto",
+    "wideLayout": true,
+    "showPercentChange": false
+   }
+  },
+  {
+   "type": "stat",
+   "id": 8,
+   "title": "Fits after losing a node?",
+   "description": "Pods' requests out of the allocatable of the two remaining nodes. Over 100 %: when a node dies, some pods stay Pending (alert KubeMemoryOvercommit). Lowest priority tiers go first.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 20,
+    "y": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum(sum by (node) (((kube_pod_container_resource_requests{resource=\"memory\",node!=\"\"} * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1)) or (kube_pod_init_container_resource_requests{resource=\"memory\",node!=\"\"} * on (namespace, pod, container) group_left () max by (namespace, pod, container) (kube_pod_init_container_info{restart_policy=\"Always\"}) * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1))))) / (sum(sum by (node) (kube_node_status_allocatable{resource=\"memory\"})) - max(sum by (node) (kube_node_status_allocatable{resource=\"memory\"})))",
+     "instant": true,
+     "range": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "value": 1,
+        "color": "red"
+       }
+      ]
+     },
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "value",
+    "justifyMode": "center",
+    "orientation": "auto",
+    "wideLayout": true,
+    "showPercentChange": false
+   }
+  },
+  {
+   "type": "row",
+   "id": 9,
+   "title": "Memory: per node",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 8
+   },
+   "panels": []
+  },
+  {
+   "type": "barchart",
+   "id": 10,
+   "title": "Physical: what uses the RAM",
+   "description": "Pods: working set of all containers. k3s: the cgroup k3s.service (k3s and containerd). System: the rest of what is used. Available: what the kernel can still hand out (MemAvailable, includes reclaimable cache). The bar is the node's physical RAM.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (node) (container_memory_working_set_bytes{container!=\"\",pod!=\"\"})",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "max by (node) (container_memory_working_set_bytes{job=\"kubelet\",systemd_service=\"k3s\"})",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "clamp_min((sum by (node) (label_replace(node_memory_MemTotal_bytes, \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info)) - sum by (node) (label_replace(node_memory_MemAvailable_bytes, \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info))) - sum by (node) (container_memory_working_set_bytes{container!=\"\",pod!=\"\"}) - max by (node) (container_memory_working_set_bytes{job=\"kubelet\",systemd_service=\"k3s\"}), 0)",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "D",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (node) (label_replace(node_memory_MemAvailable_bytes, \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info))",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "Value #A": "Pods",
+       "Value #B": "k3s",
+       "Value #C": "System (OS, kernel)",
+       "Value #D": "Available"
+      },
+      "indexByName": {
+       "node": 0,
+       "Value #A": 1,
+       "Value #B": 2,
+       "Value #C": 3,
+       "Value #D": 4
+      }
+     }
+    },
+    {
+     "id": "sortBy",
+     "options": {
+      "sort": [
+       {
+        "field": "node"
+       }
+      ]
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "fillOpacity": 85,
+      "lineWidth": 0,
+      "gradientMode": "none"
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Pods"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "blue"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "k3s"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "purple"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "System (OS, kernel)"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "orange"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Available"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "green"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "orientation": "horizontal",
+    "stacking": "normal",
+    "xField": "node",
+    "showValue": "never",
+    "barWidth": 0.7,
+    "groupWidth": 0.7,
+    "xTickLabelRotation": 0,
+    "xTickLabelSpacing": 0,
+    "fullHighlight": false,
+    "barRadius": 0,
+    "legend": {
+     "showLegend": true,
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "none"
+    }
+   }
+  },
+  {
+   "type": "barchart",
+   "id": 11,
+   "title": "Scheduler: what is promised",
+   "description": "k3s reserve: kubeReserved + eviction threshold. Pods' requests: what VPA set, of running pods (native sidecars included, completed pods left out). Free for new pods: what the scheduler can still place. The bar is the node's capacity, the same RAM as on the left; a bar longer than that: a pod carries a resize kubelet refused.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "(sum by (node) (kube_node_status_capacity{resource=\"memory\"}) - sum by (node) (kube_node_status_allocatable{resource=\"memory\"}))",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (node) (((kube_pod_container_resource_requests{resource=\"memory\",node!=\"\"} * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1)) or (kube_pod_init_container_resource_requests{resource=\"memory\",node!=\"\"} * on (namespace, pod, container) group_left () max by (namespace, pod, container) (kube_pod_init_container_info{restart_policy=\"Always\"}) * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1))))",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "clamp_min(sum by (node) (kube_node_status_allocatable{resource=\"memory\"}) - sum by (node) (((kube_pod_container_resource_requests{resource=\"memory\",node!=\"\"} * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1)) or (kube_pod_init_container_resource_requests{resource=\"memory\",node!=\"\"} * on (namespace, pod, container) group_left () max by (namespace, pod, container) (kube_pod_init_container_info{restart_policy=\"Always\"}) * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1)))), 0)",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "Value #A": "k3s reserve",
+       "Value #B": "Pods' requests (VPA)",
+       "Value #C": "Free for new pods"
+      },
+      "indexByName": {
+       "node": 0,
+       "Value #A": 1,
+       "Value #B": 2,
+       "Value #C": 3
+      }
+     }
+    },
+    {
+     "id": "sortBy",
+     "options": {
+      "sort": [
+       {
+        "field": "node"
+       }
+      ]
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "fillOpacity": 85,
+      "lineWidth": 0,
+      "gradientMode": "none"
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "k3s reserve"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "purple"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Pods' requests (VPA)"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "blue"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Free for new pods"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "green"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "orientation": "horizontal",
+    "stacking": "normal",
+    "xField": "node",
+    "showValue": "never",
+    "barWidth": 0.7,
+    "groupWidth": 0.7,
+    "xTickLabelRotation": 0,
+    "xTickLabelSpacing": 0,
+    "fullHighlight": false,
+    "barRadius": 0,
+    "legend": {
+     "showLegend": true,
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "none"
+    }
+   }
+  },
+  {
+   "type": "table",
+   "id": 12,
+   "title": "Per node, in numbers",
+   "description": "The bars above as numbers. Left half: physical use (sums to Physical RAM). Right half: the scheduler's view (k3s reserve + Allocatable = Physical RAM). Free for new pods below zero: a pod carries a resize kubelet refused.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 24,
+    "x": 0,
+    "y": 17
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (node) (label_replace(node_memory_MemTotal_bytes, \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info))",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (node) (container_memory_working_set_bytes{container!=\"\",pod!=\"\"})",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "max by (node) (container_memory_working_set_bytes{job=\"kubelet\",systemd_service=\"k3s\"})",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "D",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "clamp_min((sum by (node) (label_replace(node_memory_MemTotal_bytes, \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info)) - sum by (node) (label_replace(node_memory_MemAvailable_bytes, \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info))) - sum by (node) (container_memory_working_set_bytes{container!=\"\",pod!=\"\"}) - max by (node) (container_memory_working_set_bytes{job=\"kubelet\",systemd_service=\"k3s\"}), 0)",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "E",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (node) (label_replace(node_memory_MemAvailable_bytes, \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info))",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "F",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "(sum by (node) (kube_node_status_capacity{resource=\"memory\"}) - sum by (node) (kube_node_status_allocatable{resource=\"memory\"}))",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "G",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (node) (((kube_pod_container_resource_requests{resource=\"memory\",node!=\"\"} * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1)) or (kube_pod_init_container_resource_requests{resource=\"memory\",node!=\"\"} * on (namespace, pod, container) group_left () max by (namespace, pod, container) (kube_pod_init_container_info{restart_policy=\"Always\"}) * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1))))",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "H",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (node) (kube_node_status_allocatable{resource=\"memory\"})",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "I",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (node) (kube_node_status_allocatable{resource=\"memory\"}) - sum by (node) (((kube_pod_container_resource_requests{resource=\"memory\",node!=\"\"} * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1)) or (kube_pod_init_container_resource_requests{resource=\"memory\",node!=\"\"} * on (namespace, pod, container) group_left () max by (namespace, pod, container) (kube_pod_init_container_info{restart_policy=\"Always\"}) * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1))))",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "Value #A": "Physical RAM",
+       "Value #B": "Pods use",
+       "Value #C": "k3s uses",
+       "Value #D": "System uses",
+       "Value #E": "Available",
+       "Value #F": "k3s reserve",
+       "Value #G": "Pods' requests (VPA)",
+       "Value #H": "Allocatable",
+       "Value #I": "Free for new pods"
+      }
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "align": "auto",
+      "filterable": true
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Physical RAM"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "bytes"
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Pods use"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "bytes"
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "k3s uses"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "bytes"
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "System uses"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "bytes"
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Available"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "bytes"
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "k3s reserve"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "bytes"
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Pods' requests (VPA)"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "bytes"
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Allocatable"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "bytes"
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Free for new pods"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "bytes"
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "id": 13,
+   "title": "Physical RAM used",
+   "description": "Out of each node's physical RAM.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 22
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "(sum by (node) (label_replace(node_memory_MemTotal_bytes, \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info)) - sum by (node) (label_replace(node_memory_MemAvailable_bytes, \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info))) / sum by (node) (label_replace(node_memory_MemTotal_bytes, \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info))",
+     "legendFormat": "{{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "min": 0,
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 1,
+      "fillOpacity": 5,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "spanNulls": true,
+      "thresholdsStyle": {
+       "mode": "dashed"
+      }
+     },
+     "max": 1,
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "transparent",
+        "value": null
+       },
+       {
+        "value": 0.95,
+        "color": "red"
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "showLegend": true,
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "id": 14,
+   "title": "Pods' requests out of allocatable",
+   "description": "Scheduler's view. 100 % = the node takes no more pods.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 22
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (node) (((kube_pod_container_resource_requests{resource=\"memory\",node!=\"\"} * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1)) or (kube_pod_init_container_resource_requests{resource=\"memory\",node!=\"\"} * on (namespace, pod, container) group_left () max by (namespace, pod, container) (kube_pod_init_container_info{restart_policy=\"Always\"}) * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1)))) / sum by (node) (kube_node_status_allocatable{resource=\"memory\"})",
+     "legendFormat": "{{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "min": 0,
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 1,
+      "fillOpacity": 5,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "spanNulls": true,
+      "thresholdsStyle": {
+       "mode": "dashed"
+      }
+     },
+     "max": 1,
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "transparent",
+        "value": null
+       },
+       {
+        "value": 1,
+        "color": "red"
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "showLegend": true,
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "id": 15,
+   "title": "Swap used (zram)",
+   "description": "Compressed swap in RAM. Burstable pods may swap; growth means the node is short of memory.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 8,
+    "x": 0,
+    "y": 30
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (node) (label_replace(node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes, \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info))",
+     "legendFormat": "{{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "min": 0,
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 1,
+      "fillOpacity": 5,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "spanNulls": true
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "showLegend": true,
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "id": 16,
+   "title": "Memory pressure",
+   "description": "Share of time processes waited for memory (PSI). Above a few % the node is really short, whatever the numbers above say.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 8,
+    "x": 8,
+    "y": 30
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (node) (label_replace(rate(node_pressure_memory_waiting_seconds_total[5m]), \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info))",
+     "legendFormat": "{{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "min": 0,
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 1,
+      "fillOpacity": 5,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "spanNulls": true
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "showLegend": true,
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "id": 17,
+   "title": "k3s memory",
+   "description": "The cgroup k3s.service (k3s and containerd) against its reserve (dashed: kubeReserved + eviction threshold). Above the reserve, k3s eats into the pods' room.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 8,
+    "x": 16,
+    "y": 30
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "max by (node) (container_memory_working_set_bytes{job=\"kubelet\",systemd_service=\"k3s\"})",
+     "legendFormat": "{{node}}"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "(sum by (node) (kube_node_status_capacity{resource=\"memory\"}) - sum by (node) (kube_node_status_allocatable{resource=\"memory\"}))",
+     "legendFormat": "reserve {{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "min": 0,
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 1,
+      "fillOpacity": 5,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "spanNulls": true
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": "reserve.*"
+      },
+      "properties": [
+       {
+        "id": "custom.lineStyle",
+        "value": {
+         "fill": "dash",
+         "dash": [
+          10,
+          10
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "legend": {
+     "showLegend": true,
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "table",
+   "id": 18,
+   "title": "Pods: memory requested and used",
+   "description": "Requests are VPA's (Goldilocks shows its recommendations). Used: working set now. Far below 100 %: the request holds room the pod does not use; far above: the pod lives on other pods' room.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 10,
+    "w": 24,
+    "x": 0,
+    "y": 37
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (namespace, pod, node) (((kube_pod_container_resource_requests{resource=\"memory\",node!=\"\"} * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1)) or (kube_pod_init_container_resource_requests{resource=\"memory\",node!=\"\"} * on (namespace, pod, container) group_left () max by (namespace, pod, container) (kube_pod_init_container_info{restart_policy=\"Always\"}) * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1))))",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (namespace, pod, node) (container_memory_working_set_bytes{container!=\"\",pod!=\"\"})",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (namespace, pod, node) (container_memory_working_set_bytes{container!=\"\",pod!=\"\"}) / sum by (namespace, pod, node) (((kube_pod_container_resource_requests{resource=\"memory\",node!=\"\"} * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1)) or (kube_pod_init_container_resource_requests{resource=\"memory\",node!=\"\"} * on (namespace, pod, container) group_left () max by (namespace, pod, container) (kube_pod_init_container_info{restart_policy=\"Always\"}) * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1))))",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "D",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (namespace, pod, node) (kube_pod_container_resource_limits{resource=\"memory\"})",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "Value #A": "Requested",
+       "Value #B": "Used",
+       "Value #C": "Used / requested",
+       "Value #D": "Limit"
+      }
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "align": "auto",
+      "filterable": true
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Requested"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "bytes"
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Used"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "bytes"
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Limit"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "bytes"
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Used / requested"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "percentunit"
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Used / requested"
+      },
+      "properties": [
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "gauge",
+         "mode": "basic",
+         "valueDisplayMode": "text"
+        }
+       },
+       {
+        "id": "max",
+        "value": 2
+       },
+       {
+        "id": "min",
+        "value": 0
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "blue",
+           "value": null
+          },
+          {
+           "value": 0.5,
+           "color": "green"
+          },
+          {
+           "value": 1.2,
+           "color": "orange"
+          },
+          {
+           "value": 1.6,
+           "color": "red"
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false
+    },
+    "sortBy": [
+     {
+      "displayName": "Requested",
+      "desc": true
+     }
+    ]
+   }
+  },
+  {
+   "type": "row",
+   "id": 19,
+   "title": "CPU",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 47
+   },
+   "panels": []
+  },
+  {
+   "type": "barchart",
+   "id": 20,
+   "title": "CPU now",
+   "description": "Cores, 5-minute average. The bar is the node's cores.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 48
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (node) (rate(container_cpu_usage_seconds_total{container!=\"\",pod!=\"\"}[5m]))",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "max by (node) (rate(container_cpu_usage_seconds_total{job=\"kubelet\",systemd_service=\"k3s\"}[5m]))",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "clamp_min(sum by (node) (label_replace(rate(node_cpu_seconds_total{mode!~\"idle|iowait|steal\"}[5m]), \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info)) - sum by (node) (rate(container_cpu_usage_seconds_total{container!=\"\",pod!=\"\"}[5m])) - max by (node) (rate(container_cpu_usage_seconds_total{job=\"kubelet\",systemd_service=\"k3s\"}[5m])), 0)",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "D",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "clamp_min(count by (node) (label_replace(node_cpu_seconds_total{mode=\"idle\"}, \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info)) - sum by (node) (label_replace(rate(node_cpu_seconds_total{mode!~\"idle|iowait|steal\"}[5m]), \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info)), 0)",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "Value #A": "Pods",
+       "Value #B": "k3s",
+       "Value #C": "System",
+       "Value #D": "Idle"
+      },
+      "indexByName": {
+       "node": 0,
+       "Value #A": 1,
+       "Value #B": 2,
+       "Value #C": 3,
+       "Value #D": 4
+      }
+     }
+    },
+    {
+     "id": "sortBy",
+     "options": {
+      "sort": [
+       {
+        "field": "node"
+       }
+      ]
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "fillOpacity": 85,
+      "lineWidth": 0,
+      "gradientMode": "none"
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Pods"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "blue"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "k3s"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "purple"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "System"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "orange"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Idle"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "green"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "orientation": "horizontal",
+    "stacking": "normal",
+    "xField": "node",
+    "showValue": "never",
+    "barWidth": 0.7,
+    "groupWidth": 0.7,
+    "xTickLabelRotation": 0,
+    "xTickLabelSpacing": 0,
+    "fullHighlight": false,
+    "barRadius": 0,
+    "legend": {
+     "showLegend": true,
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "none"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "id": 21,
+   "title": "CPU used",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 48
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (node) (label_replace(rate(node_cpu_seconds_total{mode!~\"idle|iowait|steal\"}[5m]), \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info)) / count by (node) (label_replace(node_cpu_seconds_total{mode=\"idle\"}, \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info))",
+     "legendFormat": "{{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "min": 0,
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 1,
+      "fillOpacity": 5,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "spanNulls": true
+     },
+     "max": 1
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "showLegend": true,
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "id": 22,
+   "title": "Pods' CPU requests out of allocatable",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 55
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (node) (((kube_pod_container_resource_requests{resource=\"cpu\",node!=\"\"} * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1)) or (kube_pod_init_container_resource_requests{resource=\"cpu\",node!=\"\"} * on (namespace, pod, container) group_left () max by (namespace, pod, container) (kube_pod_init_container_info{restart_policy=\"Always\"}) * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1)))) / sum by (node) (kube_node_status_allocatable{resource=\"cpu\"})",
+     "legendFormat": "{{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "min": 0,
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 1,
+      "fillOpacity": 5,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "spanNulls": true,
+      "thresholdsStyle": {
+       "mode": "dashed"
+      }
+     },
+     "max": 1,
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "transparent",
+        "value": null
+       },
+       {
+        "value": 1,
+        "color": "red"
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "showLegend": true,
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "id": 23,
+   "title": "CPU throttling",
+   "description": "Pods held back by their CPU limit (share of periods throttled). Only pods with a CPU limit show.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 55
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "topk(5, sum by (namespace, pod) (rate(container_cpu_cfs_throttled_periods_total{container!=\"\"}[5m])) / sum by (namespace, pod) (rate(container_cpu_cfs_periods_total{container!=\"\"}[5m]))) > 0.01",
+     "legendFormat": "{{namespace}}/{{pod}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "min": 0,
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 1,
+      "fillOpacity": 5,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "spanNulls": true
+     },
+     "max": 1
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "showLegend": true,
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "table",
+   "id": 24,
+   "title": "Pods: CPU requested and used",
+   "description": "Cores. Used: 5-minute average.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 24,
+    "x": 0,
+    "y": 62
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (namespace, pod, node) (((kube_pod_container_resource_requests{resource=\"cpu\",node!=\"\"} * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1)) or (kube_pod_init_container_resource_requests{resource=\"cpu\",node!=\"\"} * on (namespace, pod, container) group_left () max by (namespace, pod, container) (kube_pod_init_container_info{restart_policy=\"Always\"}) * on (namespace, pod) group_left () max by (namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\"} == 1))))",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (namespace, pod, node) (rate(container_cpu_usage_seconds_total{container!=\"\",pod!=\"\"}[5m]))",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "Value #A": "Requested",
+       "Value #B": "Used"
+      }
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "align": "auto",
+      "filterable": true
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Requested"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "none"
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Used"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "none"
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false
+    },
+    "sortBy": [
+     {
+      "displayName": "Used",
+      "desc": true
+     }
+    ]
+   }
+  },
+  {
+   "type": "row",
+   "id": 25,
+   "title": "Disk and network",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 70
+   },
+   "panels": []
+  },
+  {
+   "type": "bargauge",
+   "id": 26,
+   "title": "Root filesystem used",
+   "description": "local-path volumes, images and logs share it.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 8,
+    "x": 0,
+    "y": 71
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "max by (node) (label_replace(1 - node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"}, \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info))",
+     "legendFormat": "{{node}}",
+     "instant": true,
+     "range": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "min": 0,
+     "max": 1,
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "value": 0.8,
+        "color": "orange"
+       },
+       {
+        "value": 0.9,
+        "color": "red"
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "orientation": "horizontal",
+    "displayMode": "basic",
+    "showUnfilled": true,
+    "valueMode": "color",
+    "namePlacement": "left",
+    "sizing": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "bargauge",
+   "id": 27,
+   "title": "Volumes used",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 8,
+    "x": 8,
+    "y": 71
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "max by (namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{job=\"kubelet\"} / kubelet_volume_stats_capacity_bytes{job=\"kubelet\"})",
+     "legendFormat": "{{namespace}}/{{persistentvolumeclaim}}",
+     "instant": true,
+     "range": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "min": 0,
+     "max": 1,
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "value": 0.8,
+        "color": "orange"
+       },
+       {
+        "value": 0.9,
+        "color": "red"
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "orientation": "horizontal",
+    "displayMode": "basic",
+    "showUnfilled": true,
+    "valueMode": "color",
+    "namePlacement": "left",
+    "sizing": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "id": 28,
+   "title": "Network, public interface",
+   "description": "eth0: in above zero, out below.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "VictoriaMetrics"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 8,
+    "x": 16,
+    "y": 71
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "sum by (node) (label_replace(rate(node_network_receive_bytes_total{device=\"eth0\"}[5m]), \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info))",
+     "legendFormat": "in {{node}}"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "VictoriaMetrics"
+     },
+     "expr": "-sum by (node) (label_replace(rate(node_network_transmit_bytes_total{device=\"eth0\"}[5m]), \"internal_ip\", \"$1\", \"instance\", \"([^:]+):.*\") * on (internal_ip) group_left (node) max by (internal_ip, node) (kube_node_info))",
+     "legendFormat": "out {{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "Bps",
+     "min": null,
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 1,
+      "fillOpacity": 5,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "spanNulls": true
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "showLegend": true,
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  }
+ ]
+}

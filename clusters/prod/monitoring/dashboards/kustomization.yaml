@@ -1,0 +1,14 @@
+# Our own Grafana dashboards, next to the chart's: Health (is anything broken) and Resources (memory, CPU, disk, in
+# the physical and the scheduler's view). Grafana's sidecar loads every ConfigMap labelled grafana_dashboard.
+# Change them here: Grafana does not save edits to provisioned dashboards (edit in Grafana, export the JSON, paste it).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: monitoring
+configMapGenerator:
+  - name: dashboard-health
+    files: [health.json]
+  - name: dashboard-resources
+    files: [resources.json]
+generatorOptions:
+  disableNameSuffixHash: true
+  labels: { grafana_dashboard: "1" }
