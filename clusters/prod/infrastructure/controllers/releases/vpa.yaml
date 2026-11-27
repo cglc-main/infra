@@ -23,7 +23,9 @@ spec:
       # Memory requests follow the typical daily peak (median), not the 90th percentile: pods peak at different times,
       # so the sum of every pod's worst peak (~7.7 GB) was more than the nodes can allocate (~6 GB with k3s's real
       # reserve), while the nodes never used more than ~5 GB for pods at once. A rarer peak is covered by zram and by
-      # eviction in priority order (tier-3 first). The 15 % margin stays at its default.
+      # eviction in priority order (tier-3 first). The safety margin on top is 5 % instead of the default 15 %: with
+      # 15 % the requests still did not fit (vmsingle stayed Pending), and zram is the real margin here.
       extraArgs:
         - --pod-recommendation-min-memory-mb=16
         - --target-memory-percentile=0.5
+        - --recommendation-margin-fraction=0.05

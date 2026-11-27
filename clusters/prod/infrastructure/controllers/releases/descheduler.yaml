@@ -16,8 +16,10 @@ spec:
   install: { remediation: { retries: 3 } }
   upgrade: { remediation: { retries: 3 } }
   values:
-    kind: Deployment
-    deschedulingInterval: 10m
+    # A CronJob (the chart's default): a pod exists only for the few seconds of a run, instead of a Deployment holding
+    # its 256 MiB request (it used 30-80 MiB) all the time on nodes that have ~2 GB each for pods.
+    kind: CronJob
+    schedule: "*/10 * * * *"
     deschedulerPolicy:
       profiles:
         - name: spread
